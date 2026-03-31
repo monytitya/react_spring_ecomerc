@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -37,14 +36,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/product-categories", "/api/product-categories/**")
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/manufacturers", "/api/manufacturers/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/cms", "/api/cms/**").permitAll()
-
+                        .requestMatchers("/api/products", "/api/products/**").permitAll()
+                        .requestMatchers("/api/categories", "/api/categories/**").permitAll()
+                        .requestMatchers("/api/product-categories", "/api/product-categories/**").permitAll()
+                        .requestMatchers("/api/manufacturers", "/api/manufacturers/**").permitAll()
+                        .requestMatchers("/api/stores", "/api/stores/**").permitAll()
+                        .requestMatchers("/api/cms", "/api/cms/**").permitAll()
                         .requestMatchers("/api/files/**").permitAll()
                         .requestMatchers("/api/cart", "/api/cart/**").permitAll()
                         .requestMatchers("/api/orders", "/api/orders/**").permitAll()

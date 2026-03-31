@@ -31,12 +31,19 @@ public class AdminController {
     @PostMapping(value = "/profile/{id}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> updateProfileImage(
             @PathVariable Integer id,
-            @RequestPart("file") MultipartFile file) throws IOException {
+            @RequestParam("file") MultipartFile file) throws IOException {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Please select a file to upload"));
+        }
+
         Admin admin = adminRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
+
         String filename = fileService.uploadFile(file, "admins");
         admin.setAdminImage(filename);
         adminRepository.save(admin);
-        return ResponseEntity.ok(ApiResponse.success("Admin Image uploaded", filename));
+
+        return ResponseEntity.ok(ApiResponse.success("Admin Image uploaded successfully", filename));
     }
 }
