@@ -23,8 +23,11 @@ public class WishlistService {
     }
 
     public WishlistModel addToWishlist(Integer customerId, Integer productId) {
-        wishlistRepository.findByCustomerIdAndProductId(customerId, productId)
-                .ifPresent(w -> { throw new RuntimeException("Product already in wishlist"); });
+        var existing = wishlistRepository.findByCustomerIdAndProductId(customerId, productId);
+        if (existing.isPresent()) {
+            wishlistRepository.delete(existing.get());
+            return null; // Signals 'removed'
+        }
         Wishlist wishlist = Wishlist.builder()
                 .customerId(customerId)
                 .productId(productId)

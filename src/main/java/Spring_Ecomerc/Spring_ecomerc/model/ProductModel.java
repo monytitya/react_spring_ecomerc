@@ -1,6 +1,7 @@
 package Spring_Ecomerc.Spring_ecomerc.model;
 
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -27,4 +28,5 @@ public class ProductModel {
     private String pCatTitle;
     private Integer manufacturerId;
     private String manufacturerTitle;
+    private LocalDateTime date;
 }

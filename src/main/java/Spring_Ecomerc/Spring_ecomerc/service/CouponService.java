@@ -33,6 +33,9 @@ public class CouponService {
     }
 
     public Coupon createCoupon(Coupon coupon) {
+        if (couponRepository.findByCouponCode(coupon.getCouponCode()).isPresent()) {
+            throw new RuntimeException("Coupon code '" + coupon.getCouponCode() + "' is already taken! Please choose a different code.");
+        }
         return couponRepository.save(coupon);
     }
 

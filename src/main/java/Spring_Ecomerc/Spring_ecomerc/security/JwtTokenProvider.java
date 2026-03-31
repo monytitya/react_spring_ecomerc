@@ -28,11 +28,16 @@ public class JwtTokenProvider {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
+        String role = userDetails.getAuthorities().stream()
+                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .findFirst()
+                .orElse("CUSTOMER");
+
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .claim("roles", userDetails.getAuthorities().toString())
+                .claim("role", role)
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -60,12 +65,20 @@ public class JwtTokenProvider {
     }
 
     public String getRoleFromToken(String token) {
-        return Jwts.parser()
+        Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .get("role", String.class);
+                .getPayload();
+
+        String role = claims.get("role", String.class);
+        if (role == null) {
+            Object rolesObj = claims.get("roles");
+            if (rolesObj != null) {
+                role = rolesObj.toString().replace("[", "").replace("]", "").replace("ROLE_", "").trim();
+            }
+        }
+        return role;
     }
 
     public boolean validateToken(String token) {

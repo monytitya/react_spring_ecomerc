@@ -5,13 +5,13 @@ import Spring_Ecomerc.Spring_ecomerc.entity.Customer;
 import Spring_Ecomerc.Spring_ecomerc.entity.Payment;
 import Spring_Ecomerc.Spring_ecomerc.repository.CustomerRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.PaymentRepository;
+import Spring_Ecomerc.Spring_ecomerc.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.*;
 import java.util.List;
 
 @RestController
@@ -21,6 +21,7 @@ public class CustomerController {
 
     private final CustomerRepository customerRepository;
     private final PaymentRepository paymentRepository;
+    private final FileService fileService;
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Customer>> getCustomer(@PathVariable Integer id) {
@@ -44,20 +45,29 @@ public class CustomerController {
         return ResponseEntity.ok(ApiResponse.success("Profile updated", customerRepository.save(customer)));
     }
 
-    @PostMapping("/{id}/image")
+    @PostMapping(value = "/{id}/image", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> uploadImage(
             @PathVariable Integer id,
-            @RequestParam("file") MultipartFile file) throws IOException {
+            @RequestPart("file") MultipartFile file) throws IOException {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
-        String uploadDir = "uploads/customers";
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
-        String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), uploadPath.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+        String filename = fileService.uploadFile(file, "customers");
         customer.setCustomerImage(filename);
         customerRepository.save(customer);
         return ResponseEntity.ok(ApiResponse.success("Image uploaded", filename));
+    }
+
+    @PostMapping("/{id}/image-base64")
+    public ResponseEntity<ApiResponse<String>> uploadImageBase64(
+            @PathVariable Integer id,
+            @RequestBody java.util.Map<String, String> body) throws IOException {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+        String base64Data = body.get("file");
+        String filename = fileService.uploadBase64(base64Data, "customers");
+        customer.setCustomerImage(filename);
+        customerRepository.save(customer);
+        return ResponseEntity.ok(ApiResponse.success("Base64 Image uploaded", filename));
     }
 
     // Admin endpoints

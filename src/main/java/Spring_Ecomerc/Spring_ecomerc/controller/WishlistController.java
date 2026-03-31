@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/wishlist")
@@ -23,8 +22,18 @@ public class WishlistController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<WishlistModel>> addToWishlist(@RequestBody Map<String, Integer> body) {
-        WishlistModel wishlist = wishlistService.addToWishlist(body.get("customerId"), body.get("productId"));
+    public ResponseEntity<ApiResponse<WishlistModel>> addToWishlist(@RequestBody java.util.Map<String, Integer> body) {
+        Integer customerId = body.get("customerId");
+        Integer productId = body.get("productId");
+        
+        if (customerId == null || productId == null) {
+            throw new RuntimeException("Missing customerId or productId in request body!");
+        }
+
+        WishlistModel wishlist = wishlistService.addToWishlist(customerId, productId);
+        if (wishlist == null) {
+            return ResponseEntity.ok(ApiResponse.success("Removed from wishlist", null));
+        }
         return ResponseEntity.ok(ApiResponse.success("Added to wishlist", wishlist));
     }
 

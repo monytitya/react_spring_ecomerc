@@ -34,48 +34,42 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public auth paths
                         .requestMatchers("/api/auth/**").permitAll()
-                        
-                        // Documentation
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        
-                        // Error handling path - CRITICAL for getting real error messages instead of 403
                         .requestMatchers("/error").permitAll()
-                        
-                        // Public GET endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/products").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/categories/**", "/api/categories").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/product-categories/**", "/api/product-categories").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/manufacturers/**", "/api/manufacturers").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/stores/**", "/api/stores").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/cms/**", "/api/cms").permitAll()
-                        
-                        // Files and Static resources
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/product-categories", "/api/product-categories/**")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/manufacturers", "/api/manufacturers/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/stores", "/api/stores/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/cms", "/api/cms/**").permitAll()
+
                         .requestMatchers("/api/files/**").permitAll()
-                        
-                        // Shopping Cart - Usually public but can be restricted
-                        .requestMatchers("/api/cart/**").permitAll()
-                        
-                        // Protected Admin routes
+                        .requestMatchers("/api/cart", "/api/cart/**").permitAll()
+                        .requestMatchers("/api/orders", "/api/orders/**").permitAll()
+                        .requestMatchers("/api/wishlist", "/api/wishlist/**").permitAll()
+                        .requestMatchers("/api/customers", "/api/customers/**").permitAll()
+                        .requestMatchers("/api/coupons", "/api/coupons/**").permitAll()
+
+                        // Admin routes (Properly secured with Role-Based Access)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        
-                        // Protected Customer/Admin routes
-                        .requestMatchers("/api/orders/**").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers("/api/wishlist/**").hasAnyRole("CUSTOMER", "ADMIN")
-                        .requestMatchers("/api/customers/**").hasAnyRole("CUSTOMER", "ADMIN")
-                        
+
                         // Everything else
-                        .anyRequest().authenticated()
-                )
-                // Add exception handling to clarify 401 vs 403
+                        .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                             response.setContentType("application/json");
-                            response.getWriter().write("{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"" + authException.getMessage() + "\"}");
+                            response.getWriter().write(
+                                    "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"You need a valid JWT token to access this resource.\"}");
                         })
-                )
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write(
+                                    "{\"status\": 403, \"error\": \"Forbidden\", \"message\": \"You do not have the required role (ADMIN/CUSTOMER) for this operation.\"}");
+                        }))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -89,8 +83,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // Be more flexible with dev origins or use * for testing
-        config.setAllowedOriginPatterns(List.of("*")); 
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

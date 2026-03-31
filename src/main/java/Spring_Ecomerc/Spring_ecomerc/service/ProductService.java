@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +24,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final ManufacturerRepository manufacturerRepository;
+    private final FileService fileService;
 
     public Page<ProductModel> getAllProducts(int page, int size, String sortBy) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
@@ -63,10 +63,20 @@ public class ProductService {
     }
 
     public ProductModel createProduct(Product product, MultipartFile img1, MultipartFile img2, MultipartFile img3) throws IOException {
+        product.setProductId(null);
         product.setDate(LocalDateTime.now());
-        if (img1 != null && !img1.isEmpty()) product.setProductImg1(saveFile(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) product.setProductImg2(saveFile(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) product.setProductImg3(saveFile(img3, "products"));
+        if (img1 != null && !img1.isEmpty()) product.setProductImg1(fileService.uploadFile(img1, "products"));
+        if (img2 != null && !img2.isEmpty()) product.setProductImg2(fileService.uploadFile(img2, "products"));
+        if (img3 != null && !img3.isEmpty()) product.setProductImg3(fileService.uploadFile(img3, "products"));
+        return mapToModel(productRepository.save(product));
+    }
+
+    public ProductModel createProductBase64(Product product, String img1, String img2, String img3) throws IOException {
+        product.setProductId(null);
+        product.setDate(LocalDateTime.now());
+        if (img1 != null && !img1.isEmpty()) product.setProductImg1(fileService.uploadBase64(img1, "products"));
+        if (img2 != null && !img2.isEmpty()) product.setProductImg2(fileService.uploadBase64(img2, "products"));
+        if (img3 != null && !img3.isEmpty()) product.setProductImg3(fileService.uploadBase64(img3, "products"));
         return mapToModel(productRepository.save(product));
     }
 
@@ -74,24 +84,43 @@ public class ProductService {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
-        existing.setProductTitle(updatedProduct.getProductTitle());
-        existing.setProductPrice(updatedProduct.getProductPrice());
-        existing.setProductPspPrice(updatedProduct.getProductPspPrice());
-        existing.setProductDesc(updatedProduct.getProductDesc());
-        existing.setProductFeatures(updatedProduct.getProductFeatures());
-        existing.setProductLabel(updatedProduct.getProductLabel());
-        existing.setProductKeywords(updatedProduct.getProductKeywords());
-        existing.setCatId(updatedProduct.getCatId());
-        existing.setPCatId(updatedProduct.getPCatId());
-        existing.setManufacturerId(updatedProduct.getManufacturerId());
-        existing.setStatus(updatedProduct.getStatus());
-        existing.setDate(LocalDateTime.now());
+        copyProperties(updatedProduct, existing);
         
-        if (img1 != null && !img1.isEmpty()) existing.setProductImg1(saveFile(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) existing.setProductImg2(saveFile(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) existing.setProductImg3(saveFile(img3, "products"));
+        if (img1 != null && !img1.isEmpty()) existing.setProductImg1(fileService.uploadFile(img1, "products"));
+        if (img2 != null && !img2.isEmpty()) existing.setProductImg2(fileService.uploadFile(img2, "products"));
+        if (img3 != null && !img3.isEmpty()) existing.setProductImg3(fileService.uploadFile(img3, "products"));
         
         return mapToModel(productRepository.save(existing));
+    }
+
+    public ProductModel updateProductBase64(Integer id, Product updatedProduct, String img1, String img2, String img3) throws IOException {
+        Product existing = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+        
+        copyProperties(updatedProduct, existing);
+        
+        if (img1 != null && !img1.isEmpty()) existing.setProductImg1(fileService.uploadBase64(img1, "products"));
+        if (img2 != null && !img2.isEmpty()) existing.setProductImg2(fileService.uploadBase64(img2, "products"));
+        if (img3 != null && !img3.isEmpty()) existing.setProductImg3(fileService.uploadBase64(img3, "products"));
+        
+        return mapToModel(productRepository.save(existing));
+    }
+
+    private void copyProperties(Product from, Product to) {
+        if (from.getProductTitle() != null) to.setProductTitle(from.getProductTitle());
+        if (from.getProductUrl() != null) to.setProductUrl(from.getProductUrl());
+        if (from.getProductPrice() != null) to.setProductPrice(from.getProductPrice());
+        if (from.getProductPspPrice() != null) to.setProductPspPrice(from.getProductPspPrice());
+        if (from.getProductDesc() != null) to.setProductDesc(from.getProductDesc());
+        if (from.getProductFeatures() != null) to.setProductFeatures(from.getProductFeatures());
+        if (from.getProductVideo() != null) to.setProductVideo(from.getProductVideo());
+        if (from.getProductLabel() != null) to.setProductLabel(from.getProductLabel());
+        if (from.getProductKeywords() != null) to.setProductKeywords(from.getProductKeywords());
+        if (from.getCatId() != null) to.setCatId(from.getCatId());
+        if (from.getPCatId() != null) to.setPCatId(from.getPCatId());
+        if (from.getManufacturerId() != null) to.setManufacturerId(from.getManufacturerId());
+        if (from.getStatus() != null) to.setStatus(from.getStatus());
+        to.setDate(LocalDateTime.now());
     }
 
     private ProductModel mapToModel(Product product) {
@@ -120,16 +149,9 @@ public class ProductService {
         model.setManufacturerId(product.getManufacturerId());
         manufacturerRepository.findById(product.getManufacturerId()).ifPresent(m -> model.setManufacturerTitle(m.getManufacturerTitle()));
         
+        model.setDate(product.getDate());
+        
         return model;
-    }
-
-    private String saveFile(MultipartFile file, String subDir) throws IOException {
-        String uploadDir = "uploads/" + subDir;
-        Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
-        String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        Files.copy(file.getInputStream(), uploadPath.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
-        return filename;
     }
 
     public void deleteProduct(Integer id) {

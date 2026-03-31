@@ -14,33 +14,65 @@ import java.io.IOException;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AdminProductController {
 
     private final ProductService productService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    @PostMapping("/products")
+    @PostMapping(value = "/products", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @io.swagger.v3.oas.annotations.Operation(summary = "Create product with real files")
     public ResponseEntity<ApiResponse<ProductModel>> create(
-            @RequestPart("product") Product product,
+            @RequestPart("product") String productString,
             @RequestPart(value = "img1", required = false) MultipartFile img1,
             @RequestPart(value = "img2", required = false) MultipartFile img2,
-            @RequestPart(value = "img3", required = false) MultipartFile img3) throws IOException {
-        return ResponseEntity.ok(ApiResponse.success("Product created", productService.createProduct(product, img1, img2, img3)));
+            @RequestPart(value = "img3", required = false) MultipartFile img3) {
+        try {
+            Product product = objectMapper.readValue(productString, Product.class);
+            ProductModel created = productService.createProduct(product, img1, img2, img3);
+            return ResponseEntity.ok(ApiResponse.success("Product created via Multipart (Files)", created));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to parse product data: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/products/json")
+    public ResponseEntity<ApiResponse<ProductModel>> createJson(
+            @RequestBody Spring_Ecomerc.Spring_ecomerc.dto.ProductRequest request) {
+        try {
+            ProductModel created = productService.createProductBase64(request.getProduct(), request.getImg1(),
+                    request.getImg2(),
+                    request.getImg3());
+            return ResponseEntity.ok(ApiResponse.success("Product created via JSON (Base64)", created));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create product: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/products/{id}")
     public ResponseEntity<ApiResponse<ProductModel>> update(
             @PathVariable Integer id,
-            @RequestPart("product") Product product,
+            @RequestPart("product") String productString,
             @RequestPart(value = "img1", required = false) MultipartFile img1,
             @RequestPart(value = "img2", required = false) MultipartFile img2,
-            @RequestPart(value = "img3", required = false) MultipartFile img3) throws IOException {
-        ProductModel updated = productService.updateProduct(id, product, img1, img2, img3);
-        return ResponseEntity.ok(ApiResponse.success("Product updated", updated));
+            @RequestPart(value = "img3", required = false) MultipartFile img3) {
+        try {
+            Product product = objectMapper.readValue(productString, Product.class);
+            ProductModel updated = productService.updateProduct(id, product, img1, img2, img3);
+            return ResponseEntity.ok(ApiResponse.success("Product updated", updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to update product: " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/products/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer id) {
-        productService.deleteProduct(id);
-        return ResponseEntity.ok(ApiResponse.success("Product deleted", null));
+        try {
+            productService.deleteProduct(id);
+            return ResponseEntity.ok(ApiResponse.success("Product deleted", null));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to delete product: " + e.getMessage()));
+        }
     }
 }

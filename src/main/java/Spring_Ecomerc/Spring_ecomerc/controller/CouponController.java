@@ -33,6 +33,7 @@ public class CouponController {
 
     @PostMapping("/admin")
     public ResponseEntity<ApiResponse<Coupon>> create(@RequestBody Coupon coupon) {
+        coupon.setCouponId(null);
         return ResponseEntity.ok(ApiResponse.success("Coupon created", couponService.createCoupon(coupon)));
     }
 

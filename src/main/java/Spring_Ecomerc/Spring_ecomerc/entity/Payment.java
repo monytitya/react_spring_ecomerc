@@ -20,13 +20,13 @@ public class Payment {
     private Long invoiceNo;
 
     @Column(name = "amount")
-    private Integer amount;
+    private Double amount;
 
     @Column(name = "payment_mode", columnDefinition = "TEXT")
     private String paymentMode;
 
-    @Column(name = "ref_no")
-    private Long refNo;
+    @Column(name = "ref_no", columnDefinition = "TEXT")
+    private String refNo;
 
     @Column(name = "code")
     private Integer code;
