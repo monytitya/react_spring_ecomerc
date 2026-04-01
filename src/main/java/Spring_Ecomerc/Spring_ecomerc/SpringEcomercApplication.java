@@ -18,19 +18,21 @@ public class SpringEcomercApplication {
 	@Bean
 	CommandLineRunner init(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
 		return args -> {
-			if (adminRepository.count() == 0) {
-				Admin admin = Admin.builder()
-						.adminName("Main Admin")
-						.adminEmail("admin@gmail.com")
-						.adminPass(passwordEncoder.encode("Test@123"))
-						.adminImage("admin-default.png")
-						.adminCountry("USA")
-						.adminJob("Super Admin")
-						.adminAbout("Initial system administrator")
-						.build();
-				adminRepository.save(admin);
-				System.out.println("Default Admin created: admin@gmail.com / Test@123");
-			}
+			String testEmail = "admin@gmail.com";
+			Admin admin = adminRepository.findByAdminEmail(testEmail).orElse(new Admin());
+
+			admin.setAdminName("Admin User");
+			admin.setAdminEmail(testEmail);
+			admin.setAdminPass(passwordEncoder.encode("admin123"));
+			admin.setAdminImage("admin-default.png");
+			admin.setAdminCountry("USA");
+			admin.setAdminJob("Super Admin");
+			admin.setAdminAbout("Initial system administrator");
+
+			adminRepository.save(admin);
+			System.out.println("----------------------------------------------");
+			System.out.println("TEST ADMIN READY: " + testEmail + " / admin123");
+			System.out.println("----------------------------------------------");
 		};
 	}
 }

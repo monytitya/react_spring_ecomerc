@@ -49,10 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/customers", "/api/customers/**").permitAll()
                         .requestMatchers("/api/coupons", "/api/coupons/**").permitAll()
 
-                        // Admin routes (Properly secured with Role-Based Access)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Everything else
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
