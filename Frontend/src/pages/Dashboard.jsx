@@ -40,7 +40,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Page Title */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Overview</h1>

@@ -24,4 +24,5 @@ public class Manufacturer {
 
     @Column(name = "manufacturer_image", columnDefinition = "TEXT")
     private String manufacturerImage;
+
 }

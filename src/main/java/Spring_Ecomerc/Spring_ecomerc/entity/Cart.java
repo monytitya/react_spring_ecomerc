@@ -5,7 +5,6 @@ import lombok.*;
 
 @Entity
 @Table(name = "cart")
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -26,4 +25,20 @@ public class Cart {
 
     @Column(name = "size", columnDefinition = "TEXT")
     private String size;
+
+    // Getters and Setters
+    public Integer getPId() { return pId; }
+    public void setPId(Integer pId) { this.pId = pId; }
+
+    public String getIpAdd() { return ipAdd; }
+    public void setIpAdd(String ipAdd) { this.ipAdd = ipAdd; }
+
+    public Integer getQty() { return qty; }
+    public void setQty(Integer qty) { this.qty = qty; }
+
+    public String getPPrice() { return pPrice; }
+    public void setPPrice(String pPrice) { this.pPrice = pPrice; }
+
+    public String getSize() { return size; }
+    public void setSize(String size) { this.size = size; }
 }

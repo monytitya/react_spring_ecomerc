@@ -67,4 +67,5 @@ public class Product {
 
     @Column(name = "status")
     private String status;
+
 }

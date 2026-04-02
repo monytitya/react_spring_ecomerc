@@ -5,6 +5,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "categories")
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,4 +25,5 @@ public class Category {
 
     @Column(name = "cat_image", columnDefinition = "TEXT")
     private String catImage;
+
 }
