@@ -4,17 +4,15 @@ import AdminLayout from './components/AdminLayout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-
-// Placeholder pages for other routes
-const Placeholder = ({ title }) => (
-  <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-    <div className="w-20 h-20 bg-brand/10 rounded-3xl flex items-center justify-center mb-6">
-       <span className="text-3xl">🚀</span>
-    </div>
-    <h1 className="text-3xl font-bold text-slate-900 mb-2">{title}</h1>
-    <p className="text-slate-500 max-w-md">This page is currently being integrated with the Spring Boot backend APIs. Check back soon!</p>
-  </div>
-);
+import Customers from './pages/Customers';
+import Orders from './pages/Orders';
+import Products from './pages/Products';
+import Coupons from './pages/Coupons';
+import Invoices from './pages/Invoices';
+import Analytics from './pages/Analytics';
+import CMS from './pages/CMS';
+import Settings from './pages/Settings';
+import Catalog from './pages/Catalog';
 
 function App() {
   return (
@@ -27,16 +25,16 @@ function App() {
         {/* Protected Admin Routes */}
         <Route path="/" element={<AdminLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="analytics" element={<Placeholder title="Analytics" />} />
-          <Route path="customers" element={<Placeholder title="Customer Management" />} />
-          <Route path="orders" element={<Placeholder title="Order Management" />} />
-          <Route path="products" element={<Placeholder title="Product Management" />} />
-          <Route path="invoices" element={<Placeholder title="Invoice Management" />} />
-          <Route path="coupons" element={<Placeholder title="Coupon Management" />} />
-          <Route path="calendar" element={<Placeholder title="Calendar" />} />
-          <Route path="cms" element={<Placeholder title="CMS Content" />} />
-          <Route path="settings" element={<Placeholder title="Settings" />} />
+          <Route path="dashboard"  element={<Dashboard />} />
+          <Route path="analytics"  element={<Analytics />} />
+          <Route path="customers"  element={<Customers />} />
+          <Route path="orders"     element={<Orders />} />
+          <Route path="products"   element={<Products />} />
+          <Route path="invoices"   element={<Invoices />} />
+          <Route path="coupons"    element={<Coupons />} />
+          <Route path="catalog"    element={<Catalog />} />
+          <Route path="cms"        element={<CMS />} />
+          <Route path="settings"   element={<Settings />} />
         </Route>
 
         {/* Fallback */}

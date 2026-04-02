@@ -17,7 +17,7 @@
 
 		<properties>
 			<java.version>21</java.version>
-			<lombok.version>1.18.36</lombok.version>
+			<lombok.version>1.18.30</lombok.version>
 		</properties>
 
 		<dependencies>
@@ -102,6 +102,9 @@
 					<configuration>
 						<source>${java.version}</source>
 						<target>${java.version}</target>
+						<fork>true</fork>
+						<meminitial>256m</meminitial>
+						<maxmem>512m</maxmem>
 						<annotationProcessorPaths>
 							<path>
 								<groupId>org.projectlombok</groupId>

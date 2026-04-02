@@ -23,11 +23,23 @@ const Login = () => {
       const loginFn = role === 'ADMIN' ? authApi.login : authApi.customerLogin;
       const response = await loginFn(formData);
       
-      const token = response.data.token || response.data.accessToken;
-      const userData = response.data.user || response.data;
+      // Backend: ApiResponse<AuthResponse>
+      // axios wraps HTTP body in response.data, ApiResponse has .data field
+      // So: axios.response.data = ApiResponse, ApiResponse.data = AuthResponse
+      const authData = response.data?.data || response.data;
+      // AuthResponse shape: { token, role, email, name, id }
+      const token = authData.token;
       
+      if (!token) throw new Error('No token received from server');
+
       localStorage.setItem(role === 'ADMIN' ? 'admin_token' : 'customer_token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
+      // Store flat user info for use in Header/Profile
+      localStorage.setItem('user', JSON.stringify({
+        id: authData.id,
+        name: authData.name,
+        email: authData.email,
+        role: authData.role,
+      }));
       localStorage.setItem('role', role);
 
       if (role === 'ADMIN') {
@@ -36,7 +48,11 @@ const Login = () => {
         navigate('/'); // Redirect customer to home
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Invalid credentials. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

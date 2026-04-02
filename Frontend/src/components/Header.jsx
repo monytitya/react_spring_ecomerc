@@ -1,15 +1,28 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   Settings, 
   Search, 
   ChevronDown,
   Globe,
-  Menu
+  Menu,
+  LogOut
 } from 'lucide-react';
 
 const Header = () => {
-  const user = JSON.parse(localStorage.getItem('user') || '{"username": "Admin"}');
+  const navigate = useNavigate();
+  // AuthResponse stores: { id, name, email, role }
+  const user = JSON.parse(localStorage.getItem('user') || '{"name": "Admin"}');
+  const displayName = user.name || user.adminName || user.customerName || 'Admin';
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('customer_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    navigate('/login');
+  };
 
   return (
     <header className="h-20 bg-white border-b border-slate-100 px-8 flex items-center justify-between sticky top-0 z-40">
@@ -48,18 +61,27 @@ const Header = () => {
 
         <div className="flex items-center space-x-3 cursor-pointer group">
           <div className="text-right">
-            <p className="text-sm font-bold text-slate-900 group-hover:text-brand transition-colors">{user.username || 'Kate Doe'}</p>
+            <p className="text-sm font-bold text-slate-900 group-hover:text-brand transition-colors">{displayName}</p>
             <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Super Admin</p>
           </div>
           <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/5 overflow-hidden ring-2 ring-transparent group-hover:ring-brand/20 transition-all">
             <img 
-              src={`https://ui-avatars.com/api/?name=${user.username || 'Admin'}&background=3b82f6&color=fff`} 
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=3b82f6&color=fff`} 
               alt="Profile" 
               className="w-full h-full object-cover"
             />
           </div>
           <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
         </div>
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          title="Logout"
+          className="p-2.5 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+        </button>
       </div>
     </header>
   );

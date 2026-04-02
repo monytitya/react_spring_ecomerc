@@ -29,10 +29,15 @@ const Register = () => {
     setError('');
     try {
       await authApi.register(formData);
+      // Backend returns ApiResponse<AuthResponse> on success
       setSuccess(true);
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Registration failed. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }

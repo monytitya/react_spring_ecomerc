@@ -12,7 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import StatCard from '../components/StatCard';
 import SalesReport from '../components/Charts/SalesReport';
-import { dashboardApi, productApi } from '../services/api';
+import { dashboardApi, productApi, fileUrl } from '../services/api';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -26,8 +26,10 @@ const Dashboard = () => {
           dashboardApi.getStats(),
           productApi.getFeatured()
         ]);
-        setStats(statsRes.data);
-        setTopProducts(productsRes.data.slice(0, 5));
+        // Backend wraps responses in ApiResponse { status, message, data }
+        setStats(statsRes.data.data);
+        const products = productsRes.data.data || [];
+        setTopProducts(products.slice(0, 5));
       } catch (err) {
         console.error("Error fetching dashboard data:", err);
       } finally {
@@ -128,7 +130,7 @@ const Dashboard = () => {
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-xl bg-slate-50 overflow-hidden border border-slate-100">
                     <img 
-                      src={product.imageName ? `http://localhost:9090/api/files/${product.imageName}` : product.img} 
+                      src={product.imageName ? fileUrl(product.imageName) : product.img} 
                       alt={product.name} 
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" 
                     />

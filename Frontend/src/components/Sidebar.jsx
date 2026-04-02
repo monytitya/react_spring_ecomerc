@@ -1,28 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Users, 
-  Package, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  ChevronRight,
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Users,
+  Package,
+  FileText,
+  Settings,
+  LogOut,
   PieChart,
-  Calendar,
   Gift,
-  Files
+  Files,
+  Tag,
+  Receipt,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const SidebarItem = ({ icon: Icon, label, to, badge }) => (
   <NavLink
     to={to}
     className={({ isActive }) => `
       flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-200 group
-      ${isActive 
-        ? 'bg-brand text-white shadow-lg shadow-brand/20' 
+      ${isActive
+        ? 'bg-brand text-white shadow-lg shadow-brand/20'
         : 'text-slate-400 hover:bg-white/5 hover:text-white'}
     `}
   >
@@ -31,7 +30,7 @@ const SidebarItem = ({ icon: Icon, label, to, badge }) => (
       <span className="font-medium">{label}</span>
     </div>
     {badge && (
-      <span className="bg-brand text-[10px] px-1.5 py-0.5 rounded-full font-bold text-white">
+      <span className="bg-white/20 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
         {badge}
       </span>
     )}
@@ -42,6 +41,9 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('customer_token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
     navigate('/login');
   };
 
@@ -56,35 +58,41 @@ const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <div className="space-y-8 flex-1">
+      <div className="space-y-6 flex-1">
         <div>
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" badge="6" />
+          <SidebarItem icon={LayoutDashboard} label="Dashboard" to="/dashboard" />
         </div>
 
         <div>
-          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-4">Management</h3>
+          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">Management</h3>
           <div className="space-y-1">
-            <SidebarItem icon={PieChart} label="Analytics" to="/analytics" />
-            <SidebarItem icon={Users} label="Customers" to="/customers" />
-            <SidebarItem icon={ShoppingCart} label="Orders" to="/orders" />
-            <SidebarItem icon={Package} label="Products" to="/products" />
-            <SidebarItem icon={FileText} label="Invoices" to="/invoices" />
-            <SidebarItem icon={Gift} label="Coupons" to="/coupons" />
+            <SidebarItem icon={PieChart}    label="Analytics"  to="/analytics" />
+            <SidebarItem icon={Users}       label="Customers"  to="/customers" />
+            <SidebarItem icon={ShoppingCart} label="Orders"   to="/orders" />
+            <SidebarItem icon={Package}     label="Products"   to="/products" />
+            <SidebarItem icon={Receipt}     label="Invoices"   to="/invoices" />
+            <SidebarItem icon={Gift}        label="Coupons"    to="/coupons" />
           </div>
         </div>
 
         <div>
-          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-4">System</h3>
+          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">Catalog</h3>
           <div className="space-y-1">
-            <SidebarItem icon={Calendar} label="Calendar" to="/calendar" />
-            <SidebarItem icon={Files} label="CMS" to="/cms" />
-            <SidebarItem icon={Settings} label="Settings" to="/settings" />
+            <SidebarItem icon={Tag}         label="Categories & Brands" to="/catalog" />
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3 px-4">System</h3>
+          <div className="space-y-1">
+            <SidebarItem icon={Files}       label="CMS"       to="/cms" />
+            <SidebarItem icon={Settings}    label="Settings"  to="/settings" />
           </div>
         </div>
       </div>
 
       {/* Logout */}
-      <button 
+      <button
         onClick={handleLogout}
         className="mt-auto flex items-center space-x-3 px-4 py-4 text-slate-400 hover:text-white transition-colors group"
       >

@@ -1,7 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:9090/api';
-
+const API_BASE_URL = '/api';
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -9,10 +8,9 @@ const api = axios.create({
   },
 });
 
-// Interceptor for JWT tokens
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('admin_token');
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('customer_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,13 +21,12 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for session expiry
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear token and redirect to login if unauthorized
       localStorage.removeItem('admin_token');
+      localStorage.removeItem('customer_token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -48,41 +45,108 @@ export const dashboardApi = {
 
 export const orderApi = {
   getAll: () => api.get('/orders/admin/all'),
-  updateStatus: (id, status) => api.put(`/orders/admin/${id}/status`, null, { params: { status } }),
-  getCustomerOrders: (id) => api.get(`/orders/my/${id}`),
+  updateStatus: (id, status) => api.put(`/orders/admin/${id}/status`, { status }),
+  getCustomerOrders: (customerId) => api.get(`/orders/my/${customerId}`),
+  placeOrder: (orderData) => api.post('/orders', orderData),
 };
 
+
 export const productApi = {
-  getProducts: () => api.get('/products'),
+  getProducts: (page = 0, size = 12, sortBy = 'productId') =>
+    api.get('/products', { params: { page, size, sortBy } }),
   getFeatured: () => api.get('/products/featured'),
   getById: (id) => api.get(`/products/${id}`),
-  search: (query) => api.get('/products/search', { params: { query } }),
+  search: (keyword) => api.get('/products/search', { params: { keyword } }),
+  getByCategory: (catId) => api.get(`/products/category/${catId}`),
+  getBySubCategory: (pCatId) => api.get(`/products/subcategory/${pCatId}`),
+  getByManufacturer: (manufacturerId) => api.get(`/products/manufacturer/${manufacturerId}`),
+  getByLabel: (label) => api.get(`/products/label/${label}`),
   admin: {
-    create: (data) => api.post('/admin/products', data),
-    createWithFile: (formData) => api.post('/admin/products', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    }),
-    update: (id, data) => api.put(`/admin/products/${id}`, data),
+
+    create: (formData) =>
+      api.post('/admin/products', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
+
+    createJson: (data) => api.post('/admin/products/json', data),
+    update: (id, formData) =>
+      api.put(`/admin/products/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
     delete: (id) => api.delete(`/admin/products/${id}`),
-  }
+  },
 };
 
 export const customerApi = {
   getAll: () => api.get('/customers/admin/all'),
   getById: (id) => api.get(`/customers/${id}`),
   update: (id, data) => api.put(`/customers/${id}`, data),
-  getPayments: () => api.get('/customers/payments'),
+  uploadImage: (id, file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post(`/customers/${id}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  uploadImageBase64: (id, base64) =>
+    api.post(`/customers/${id}/image-base64`, { file: base64 }),
+  getPaymentsByInvoice: (invoiceNo) => api.get(`/customers/payments/${invoiceNo}`),
+  addPayment: (payment) => api.post('/customers/payments', payment),
 };
 
 export const catalogApi = {
   getCategories: () => api.get('/categories'),
+  getTopCategories: () => api.get('/categories/top'),
+  getCategoryById: (id) => api.get(`/categories/${id}`),
   getManufacturers: () => api.get('/manufacturers'),
+  getTopManufacturers: () => api.get('/manufacturers/top'),
 };
+
 
 export const couponApi = {
   getAll: () => api.get('/coupons/admin/all'),
-  apply: (code) => api.post(`/coupons/apply/${code}`),
+  create: (coupon) => api.post('/coupons/admin', coupon),
+  delete: (id) => api.delete(`/coupons/admin/${id}`),
   validate: (code) => api.get(`/coupons/validate/${code}`),
+  apply: (code) => api.post(`/coupons/apply/${code}`),
 };
 
+
+export const cartApi = {
+  get: () => api.get('/cart'),
+  add: (cartItem) => api.post('/cart', cartItem),
+  updateQty: (pId, qty) => api.put(`/cart/${pId}`, null, { params: { qty } }),
+  remove: (pId) => api.delete(`/cart/${pId}`),
+  clear: () => api.delete('/cart/clear'),
+};
+
+export const wishlistApi = {
+  get: (customerId) => api.get(`/wishlist/${customerId}`),
+  toggle: (customerId, productId) => api.post('/wishlist', { customerId, productId }),
+  remove: (customerId, productId) => api.delete(`/wishlist/${customerId}/${productId}`),
+};
+
+
+export const cmsApi = {
+  getAbout: () => api.get('/cms/about'),
+  updateAbout: (id, data) => api.put(`/cms/about/${id}`, data),
+  getContact: () => api.get('/cms/contact'),
+  updateContact: (id, data) => api.put(`/cms/contact/${id}`, data),
+  getTerms: () => api.get('/cms/terms'),
+  getTermByLink: (link) => api.get(`/cms/terms/${link}`),
+  getStores: () => api.get('/cms/stores'),
+  getEnquiryTypes: () => api.get('/cms/enquiry-types'),
+};
+
+export const adminApi = {
+  getProfile: (id) => api.get(`/admin/profile/${id}`),
+  uploadProfileImage: (id, formData) =>
+    api.post(`/admin/profile/${id}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+};
+
+export const fileUrl = (filename) => `http://localhost:9090/api/files/${filename}`;
+
 export default api;
+
