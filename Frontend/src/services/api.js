@@ -37,10 +37,12 @@ export const authApi = {
   login: (credentials) => api.post('/auth/admin/login', credentials),
   customerLogin: (credentials) => api.post('/auth/customer/login', credentials),
   register: (data) => api.post('/auth/customer/register', data),
+  resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 export const dashboardApi = {
   getStats: () => api.get('/admin/dashboard/stats'),
+  getCustomerStats: (id) => api.get(`/admin/dashboard/customer/${id}`),
 };
 
 export const orderApi = {
@@ -155,6 +157,7 @@ export const adminApi = {
     api.post(`/admin/profile/${id}/image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  resetData: () => api.delete('/admin/reset-data'),
 };
 
 export const fileUrl = (filename) => `http://localhost:9090/api/files/${filename}`;

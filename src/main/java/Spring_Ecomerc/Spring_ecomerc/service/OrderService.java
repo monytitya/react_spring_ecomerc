@@ -21,6 +21,8 @@ public class OrderService {
     private final CustomerOrderRepository customerOrderRepository;
     private final PendingOrderRepository pendingOrderRepository;
     private final CartRepository cartRepository;
+    private final CustomerRepository customerRepository;
+    private final ProductRepository productRepository;
 
     @Transactional
     public OrderModel placeOrder(PlaceOrderRequest request, String ipAddress) {
@@ -53,7 +55,8 @@ public class OrderService {
     }
 
     public List<OrderModel> getOrdersByCustomer(Integer customerId) {
-        return customerOrderRepository.findByCustomerId(customerId).stream().map(this::mapToModel).collect(Collectors.toList());
+        return customerOrderRepository.findByCustomerId(customerId).stream().map(this::mapToModel)
+                .collect(Collectors.toList());
     }
 
     public List<OrderModel> getAllOrders() {
@@ -77,24 +80,29 @@ public class OrderService {
         model.setSize(order.getSize());
         model.setOrderDate(order.getOrderDate());
         model.setOrderStatus(order.getOrderStatus());
-        
+
         if (order.getCustomer() != null) {
             model.setCustomerName(order.getCustomer().getCustomerName());
+        } else if (order.getCustomerId() != null) {
+            customerRepository.findById(order.getCustomerId()).ifPresentOrElse(
+                    c -> model.setCustomerName(c.getCustomerName()),
+                    () -> model.setCustomerName("Unknown Customer (ID: " + order.getCustomerId() + ")"));
         } else {
-            model.setCustomerName("Unknown Customer (ID: " + order.getCustomerId() + ")");
+            model.setCustomerName("Guest User");
         }
-        
-        // Find product from pending_orders for display
         pendingOrderRepository.findByInvoiceNo(order.getInvoiceNo()).stream().findFirst().ifPresent(po -> {
             model.setProductId(po.getProductId());
             if (po.getProduct() != null) {
                 model.setProductTitle(po.getProduct().getProductTitle());
+            } else if (po.getProductId() != null) {
+                productRepository.findById(po.getProductId()).ifPresentOrElse(
+                        p -> model.setProductTitle(p.getProductTitle()),
+                        () -> model.setProductTitle("Unknown Product (ID: " + po.getProductId() + ")"));
             } else {
-                model.setProductTitle("Unknown Product (ID: " + po.getProductId() + ")");
+                model.setProductTitle("Unknown Product");
             }
         });
-        
+
         return model;
     }
 }
-

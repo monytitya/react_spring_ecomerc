@@ -15,6 +15,25 @@ const Login = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const [showForgot, setShowForgot] = useState(false);
+  const [resetData, setResetData] = useState({ email: '', newPassword: '' });
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setResetLoading(true);
+    try {
+      await authApi.resetPassword(resetData);
+      setShowForgot(false);
+      setFormData({ ...formData, email: resetData.email });
+      alert('Password reset successful! You can now log in.');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to reset password');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -39,14 +58,12 @@ const Login = () => {
         name: authData.name,
         email: authData.email,
         role: authData.role,
+        image: authData.image // optional
       }));
       localStorage.setItem('role', role);
 
-      if (role === 'ADMIN') {
-        navigate('/dashboard');
-      } else {
-        navigate('/'); // Redirect customer to home
-      }
+      // Redirect both roles to dashboard
+      navigate('/dashboard');
     } catch (err) {
       const msg =
         err.response?.data?.message ||
@@ -60,6 +77,68 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 font-sans">
+      {/* Forgot Password Modal */}
+      {showForgot && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-slate-100"
+          >
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Reset Password</h2>
+            <p className="text-sm text-slate-500 mb-6 font-medium">Enter your account email and choose a new password.</p>
+            
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-brand transition-colors" />
+                  <input
+                    type="email"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+                    placeholder="name@email.com"
+                    onChange={(e) => setResetData({ ...resetData, email: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">New Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-brand transition-colors" />
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all"
+                    placeholder="••••••••"
+                    onChange={(e) => setResetData({ ...resetData, newPassword: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setShowForgot(false)}
+                  className="flex-1 py-3 px-4 bg-slate-50 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-all border border-slate-200/60"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={resetLoading}
+                  className="flex-1 py-3 px-4 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 flex items-center justify-center"
+                >
+                  {resetLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Reset'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -109,6 +188,7 @@ const Login = () => {
                   name="email"
                   required
                   autoComplete="email"
+                  value={formData.email}
                   className="block w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent transition-all"
                   placeholder="admin@mail.com"
                   onChange={handleChange}
@@ -139,7 +219,13 @@ const Login = () => {
                 <input type="checkbox" className="rounded border-slate-300 text-brand focus:ring-brand mr-2" />
                 Remember me
               </label>
-              <a href="#" className="text-brand hover:underline font-medium">Forgot password?</a>
+              <button 
+                type="button"
+                onClick={() => setShowForgot(true)}
+                className="text-brand hover:underline font-medium"
+              >
+                Forgot password?
+              </button>
             </div>
 
             <button

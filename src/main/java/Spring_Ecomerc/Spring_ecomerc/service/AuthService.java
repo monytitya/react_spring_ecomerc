@@ -28,7 +28,7 @@ public class AuthService {
         }
 
         String token = jwtTokenProvider.generateTokenFromEmail(admin.getAdminEmail(), "ADMIN");
-        return new AuthResponse(token, "ADMIN", admin.getAdminEmail(), admin.getAdminName(), admin.getAdminId());
+        return new AuthResponse(token, "ADMIN", admin.getAdminEmail(), admin.getAdminName(), admin.getAdminId(), admin.getAdminImage());
     }
 
     public AuthResponse loginCustomer(LoginRequest request) {
@@ -41,7 +41,7 @@ public class AuthService {
 
         String token = jwtTokenProvider.generateTokenFromEmail(customer.getCustomerEmail(), "CUSTOMER");
         return new AuthResponse(token, "CUSTOMER", customer.getCustomerEmail(), customer.getCustomerName(),
-                customer.getCustomerId());
+                customer.getCustomerId(), customer.getCustomerImage());
     }
 
     public AuthResponse registerCustomer(CustomerRegisterRequest request) {
@@ -62,7 +62,28 @@ public class AuthService {
         String token = jwtTokenProvider.generateTokenFromEmail(savedCustomer.getCustomerEmail(), "CUSTOMER");
 
         return new AuthResponse(token, "CUSTOMER", savedCustomer.getCustomerEmail(), savedCustomer.getCustomerName(),
-                savedCustomer.getCustomerId());
+                savedCustomer.getCustomerId(), savedCustomer.getCustomerImage());
     }
 
+    public void resetPassword(PasswordResetRequest request) {
+        // Try searching in Admin first
+        var adminOpt = adminRepository.findByAdminEmail(request.getEmail());
+        if (adminOpt.isPresent()) {
+            Admin admin = adminOpt.get();
+            admin.setAdminPass(passwordEncoder.encode(request.getNewPassword()));
+            adminRepository.save(admin);
+            return;
+        }
+
+        // Try searching in Customer
+        var customerOpt = customerRepository.findByCustomerEmail(request.getEmail());
+        if (customerOpt.isPresent()) {
+            Customer customer = customerOpt.get();
+            customer.setCustomerPass(passwordEncoder.encode(request.getNewPassword()));
+            customerRepository.save(customer);
+            return;
+        }
+
+        throw new RuntimeException("No user found with email: " + request.getEmail());
+    }
 }

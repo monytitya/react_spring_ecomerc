@@ -22,7 +22,7 @@ const data = [
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-sidebar p-3 rounded-lg shadow-xl border border-white/10 text-white text-[12px] font-sans">
+      <div className="bg-slate-900/95 backdrop-blur-sm p-3 rounded-xl shadow-2xl border border-white/10 text-white text-[12px] font-sans">
         <p className="font-bold mb-1">{label}</p>
         <p className="text-brand flex items-center space-x-2">
           <span className="w-2 h-2 rounded-full bg-brand"></span>
@@ -56,7 +56,7 @@ const SalesReport = () => {
               <stop offset="95%" stopColor="#a78bfa" stopOpacity={0}/>
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-100 dark:text-white/5" />
           <XAxis 
             dataKey="name" 
             axisLine={false} 

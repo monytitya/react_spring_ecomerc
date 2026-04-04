@@ -18,4 +18,9 @@ public class DashboardController {
     public ResponseEntity<ApiResponse<DashboardModel>> getStats() {
         return ResponseEntity.ok(ApiResponse.success(dashboardService.getStats()));
     }
+
+    @GetMapping("/customer/{id}")
+    public ResponseEntity<ApiResponse<DashboardModel>> getCustomerStats(@PathVariable Integer id) {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getCustomerStats(id)));
+    }
 }

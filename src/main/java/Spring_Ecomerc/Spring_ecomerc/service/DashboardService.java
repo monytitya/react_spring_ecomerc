@@ -30,9 +30,24 @@ public class DashboardService {
                 .mapToLong(o -> o.getDueAmount().longValue())
                 .sum();
         model.setTotalRevenue(revenue);
+        model.setTotalProfit(revenue); // For now, assume profit = revenue for simplicity
+        model.setTotalExpenses((long)(revenue * 0.05)); // 5% estimate
+        model.setNewUsers(customerRepository.count());
         
         model.setTotalCategories(categoryRepository.count());
         model.setTotalManufacturers(manufacturerRepository.count());
+        
+        return model;
+    }
+
+    public DashboardModel getCustomerStats(Integer customerId) {
+        DashboardModel model = new DashboardModel();
+        var orders = orderRepository.findByCustomerId(customerId);
+        
+        model.setTotalOrders((long) orders.size());
+        model.setPendingOrders(orders.stream().filter(o -> "pending".equalsIgnoreCase(o.getOrderStatus())).count());
+        model.setCompletedOrders(orders.stream().filter(o -> "Complete".equalsIgnoreCase(o.getOrderStatus())).count());
+        model.setTotalRevenue(orders.stream().mapToLong(o -> o.getDueAmount().longValue()).sum());
         
         return model;
     }

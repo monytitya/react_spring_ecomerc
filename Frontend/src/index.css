@@ -2,13 +2,14 @@
 
 @theme {
   --color-brand: #3b82f6;
-  --color-sidebar: #1e1b4b; /* Navy dark for Blueberry CRM sidebar */
+  --color-sidebar: #0f172a; /* Permanent Dark Sidebar anchor */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background-color: #f8fafc;
+  color: #0f172a;
 }
 
 body {
@@ -29,4 +30,10 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Base transitions for smooth UX */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 200ms;
 }

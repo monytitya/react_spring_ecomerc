@@ -196,10 +196,10 @@ const Products = () => {
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center space-x-1">
-                        <button onClick={() => openEdit(p)} className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all">
+                        <button onClick={() => openEdit(p)} className="p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(p.productId)} disabled={deletingId === p.productId} className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                        <button onClick={() => handleDelete(p.productId)} disabled={deletingId === p.productId} className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 transition-all">
                           {deletingId === p.productId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>
                       </div>

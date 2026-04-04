@@ -1,19 +1,57 @@
 import React, { useState } from 'react';
-import { adminApi } from '../services/api';
+import { adminApi, fileUrl } from '../services/api';
 import { User, Lock, Camera, Save, Loader2, Mail, Shield } from 'lucide-react';
 
 const Settings = () => {
-  const stored = JSON.parse(localStorage.getItem('user') || '{}');
+  const [stored, setStored] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
   const [profile, setProfile] = useState({
-    name: stored.name || '',
-    email: stored.email || '',
+    name: stored.name || stored.adminName || '',
+    email: stored.email || stored.adminEmail || '',
     role: stored.role || 'ADMIN',
+    image: stored.image || stored.adminImage || null
   });
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [saving, setSaving] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [toast, setToast] = useState(null);
+
+  const handleResetData = async () => {
+    if (!window.confirm("ARE YOU SURE? This will permanently delete all Customers and Orders. This action cannot be undone.")) return;
+    setResetLoading(true);
+    try {
+      await adminApi.resetData();
+      showToast("Marketplace data reset successfully!");
+    } catch {
+      showToast("Failed to reset data", "error");
+    } finally {
+      setResetLoading(false);
+    }
+  };
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarFile, setAvatarFile] = useState(null);
+
+  React.useEffect(() => {
+    const fetchAdmin = async () => {
+      if (!stored.id) return;
+      try {
+        const res = await adminApi.getProfile(stored.id);
+        const data = res.data.data;
+        setProfile({
+          name: data.adminName,
+          email: data.adminEmail,
+          role: 'ADMIN',
+          image: data.adminImage
+        });
+        // Sync storage if needed
+        const newUser = { ...stored, name: data.adminName, email: data.adminEmail, image: data.adminImage };
+        localStorage.setItem('user', JSON.stringify(newUser));
+        setStored(newUser);
+      } catch (err) {
+        console.error("Failed to fetch admin profile:", err);
+      }
+    };
+    fetchAdmin();
+  }, []);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -31,14 +69,24 @@ const Settings = () => {
     setSaving(true);
     try {
       const adminId = stored.id;
+      let newImage = profile.image;
+      
       if (avatarFile && adminId) {
         const formData = new FormData();
         formData.append('file', avatarFile);
-        await adminApi.uploadProfileImage(adminId, formData);
+        const imgRes = await adminApi.uploadProfileImage(adminId, formData);
+        newImage = imgRes.data.data;
       }
-      // Update localStorage
-      localStorage.setItem('user', JSON.stringify({ ...stored, name: profile.name, email: profile.email }));
+      
+      // Update localStorage for consistency
+      const updatedUser = { ...stored, name: profile.name, email: profile.email, image: newImage };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setStored(updatedUser);
+      setProfile(prev => ({ ...prev, image: newImage }));
+      
       showToast('Profile updated successfully!');
+      // Force a slight delay to allow image propagation
+      setTimeout(() => window.dispatchEvent(new Event('storage')), 100);
     } catch {
       showToast('Failed to update profile', 'error');
     } finally {
@@ -49,7 +97,7 @@ const Settings = () => {
   const handleChangePassword = (e) => { e.preventDefault(); };
 
   const displayName = profile.name || profile.email || 'Admin';
-  const avatarSrc = avatarPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=3b82f6&color=fff&size=200`;
+  const avatarSrc = avatarPreview || (profile.image ? fileUrl(profile.image) : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=3b82f6&color=fff&size=200`);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-3xl">
@@ -76,8 +124,17 @@ const Settings = () => {
         {/* Avatar */}
         <div className="flex items-center space-x-6 mb-8">
           <div className="relative">
-            <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-brand/10">
-              <img src={avatarSrc} alt="Profile" className="w-full h-full object-cover" />
+            <div className="w-24 h-24 rounded-2xl overflow-hidden ring-4 ring-brand/10 bg-slate-50">
+              <img 
+                src={avatarSrc} 
+                alt="Profile" 
+                className="w-full h-full object-cover" 
+                onError={(e) => {
+                  if (!avatarSrc.includes('ui-avatars')) {
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=3b82f6&color=fff&size=200`;
+                  }
+                }}
+              />
             </div>
             <label className="absolute bottom-0 right-0 w-8 h-8 bg-brand rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:bg-brand/90 transition-all">
               <Camera className="w-3.5 h-3.5 text-white" />
@@ -210,21 +267,61 @@ const Settings = () => {
         </form>
       </div>
 
+      {/* Danger Zone */}
+      <div className="bg-white rounded-2xl border-2 border-rose-100 shadow-sm overflow-hidden">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-9 h-9 bg-rose-50 rounded-xl flex items-center justify-center">
+                <Shield className="w-4 h-4 text-rose-500" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800">Danger Zone</h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">High Impact Administrative Actions</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-100/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="max-w-md">
+              <h4 className="text-sm font-bold text-rose-900 mb-1">Reset Marketplace Data</h4>
+              <p className="text-xs text-rose-700 leading-relaxed font-medium">
+                This will permanently delete all **Customers, Orders, Carts, and Wishlists**. 
+                Your Admin account and Product catalog will remain safe. This action cannot be undone.
+              </p>
+            </div>
+            <button
+              onClick={handleResetData}
+              disabled={resetLoading}
+              className="flex items-center justify-center space-x-2 bg-rose-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20 whitespace-nowrap min-w-[180px]"
+            >
+              {resetLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <span>Reset Marketplace</span>}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Session Info */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
-        <h3 className="font-bold mb-4 text-slate-200">Session Information</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white text-sm">
+        <h3 className="font-bold mb-4 text-slate-200 uppercase tracking-widest text-[10px]">System Environment</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Logged in as</p>
-            <p className="font-bold">{displayName}</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold mb-1.5 opacity-60">Identity</p>
+            <p className="font-bold text-white">{displayName}</p>
           </div>
           <div>
-            <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Role</p>
-            <p className="font-bold">{profile.role}</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold mb-1.5 opacity-60">Hierarchy</p>
+            <p className="font-bold text-brand uppercase tracking-wider flex items-center space-x-1.5">
+              <Shield className="w-3 h-3" />
+              <span>{profile.role}</span>
+            </p>
           </div>
           <div>
-            <p className="text-slate-400 text-xs uppercase tracking-wider font-medium mb-1">Session</p>
-            <p className="font-bold text-emerald-400">● Active</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold mb-1.5 opacity-60">Connection</p>
+            <p className="font-bold text-emerald-400 flex items-center space-x-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Live System</span>
+            </p>
           </div>
         </div>
       </div>

@@ -13,6 +13,9 @@ public class DashboardModel {
     private Long pendingOrders;
     private Long completedOrders;
     private Long totalRevenue;
+    private Long totalProfit;
+    private Long totalExpenses;
+    private Long newUsers;
     private Long totalCategories;
     private Long totalManufacturers;
 }

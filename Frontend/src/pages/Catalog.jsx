@@ -154,13 +154,13 @@ const CatalogPage = () => {
                         <div className="flex items-center space-x-1">
                           <button
                             onClick={() => setModal({ type: tab, data: { ...item }, mode: 'edit' })}
-                            className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all">
+                            className="p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all">
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(item[idKey], tab === 'categories')}
                             disabled={deletingId === item[idKey]}
-                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                            className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 transition-all">
                             {deletingId === item[idKey] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                           </button>
                         </div>

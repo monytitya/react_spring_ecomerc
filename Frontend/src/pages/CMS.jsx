@@ -114,7 +114,7 @@ const CMS = () => {
                     <p className="text-sm text-slate-500 line-clamp-2">{item.aboutDesc}</p>
                   </div>
                   <button onClick={() => setEditModal({ type: 'about', item: { ...item } })}
-                    className="ml-4 p-2 rounded-lg text-slate-300 hover:text-brand hover:bg-brand/10 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    className="ml-4 p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
                     <Edit2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -137,7 +137,7 @@ const CMS = () => {
                     <p className="text-sm text-slate-500 line-clamp-2">{item.contactDesc}</p>
                   </div>
                   <button onClick={() => setEditModal({ type: 'contact', item: { ...item } })}
-                    className="ml-4 p-2 rounded-lg text-slate-300 hover:text-violet-500 hover:bg-violet-50 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
+                    className="ml-4 p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all opacity-0 group-hover:opacity-100 flex-shrink-0">
                     <Edit2 className="w-4 h-4" />
                   </button>
                 </div>

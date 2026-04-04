@@ -20,6 +20,8 @@ const Orders = () => {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
   const [toast, setToast] = useState(null);
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = localStorage.getItem('role') === 'ADMIN';
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -29,7 +31,9 @@ const Orders = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await orderApi.getAll();
+      const res = isAdmin 
+        ? await orderApi.getAll() 
+        : await orderApi.getCustomerOrders(storedUser.id);
       const data = res.data?.data || [];
       setOrders(data);
       setFiltered(data);
@@ -69,8 +73,8 @@ const Orders = () => {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Orders</h1>
-          <p className="text-sm text-slate-500 mt-1">{filtered.length} orders found</p>
+          <h1 className="text-2xl font-bold text-slate-900">{isAdmin ? 'Orders' : 'My Orders'}</h1>
+          <p className="text-sm text-slate-500 mt-1">{filtered.length} {isAdmin ? 'orders found' : 'purchases in history'}</p>
         </div>
       </div>
 
@@ -79,7 +83,7 @@ const Orders = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by customer, invoice..."
+            placeholder={isAdmin ? "Search by customer, invoice..." : "Search by product or invoice..."}
             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
           />
         </div>
@@ -101,17 +105,22 @@ const Orders = () => {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  {['Invoice', 'Customer', 'Product', 'Qty', 'Amount', 'Date', 'Status', 'Action'].map(h => (
-                    <th key={h} className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">{h}</th>
-                  ))}
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Invoice</th>
+                  {isAdmin && <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Customer</th>}
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Product</th>
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Qty</th>
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Amount</th>
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Date</th>
+                  <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Status</th>
+                  {isAdmin && <th className="text-left px-5 py-4 font-semibold text-slate-500 text-xs uppercase tracking-wider">Action</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(order => (
                   <tr key={order.orderId} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-4 font-mono text-xs text-slate-500">#{order.invoiceNo}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-800">{order.customerName}</td>
-                    <td className="px-5 py-4 text-slate-600 max-w-[160px] truncate">{order.productTitle}</td>
+                    {isAdmin && <td className="px-5 py-4 font-semibold text-slate-800">{order.customerName}</td>}
+                    <td className="px-5 py-4 text-slate-600 max-w-[200px] truncate">{order.productTitle}</td>
                     <td className="px-5 py-4 text-slate-600">{order.qty}</td>
                     <td className="px-5 py-4 font-bold text-slate-800">${order.dueAmount?.toLocaleString()}</td>
                     <td className="px-5 py-4 text-slate-500 text-xs">{order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '—'}</td>
@@ -120,19 +129,21 @@ const Orders = () => {
                         {order.orderStatus}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="relative">
-                        <select
-                          value={order.orderStatus}
-                          onChange={e => handleStatusChange(order.orderId, e.target.value)}
-                          disabled={updatingId === order.orderId}
-                          className="appearance-none pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer disabled:opacity-50"
-                        >
-                          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
-                      </div>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-4">
+                        <div className="relative">
+                          <select
+                            value={order.orderStatus}
+                            onChange={e => handleStatusChange(order.orderId, e.target.value)}
+                            disabled={updatingId === order.orderId}
+                            className="appearance-none pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand/20 cursor-pointer disabled:opacity-50"
+                          >
+                            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400 pointer-events-none" />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (

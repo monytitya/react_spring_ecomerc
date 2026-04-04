@@ -11,6 +11,7 @@ const Customers = () => {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
+  const [failedImages, setFailedImages] = useState({});
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -122,9 +123,14 @@ const Customers = () => {
                     <td className="px-5 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-9 h-9 rounded-xl bg-brand/10 overflow-hidden flex-shrink-0">
-                          {c.customerImage
-                            ? <img src={fileUrl(c.customerImage)} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center text-brand font-bold text-sm">{c.customerName?.[0]}</div>
+                          {c.customerImage && !failedImages[c.customerId]
+                            ? <img
+                                src={fileUrl(c.customerImage)}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                onError={() => setFailedImages(prev => ({ ...prev, [c.customerId]: true }))}
+                              />
+                            : <div className="w-full h-full flex items-center justify-center text-brand font-bold text-sm tracking-tight">{c.customerName?.[0] || '?'}</div>
                           }
                         </div>
                         <span className="font-semibold text-slate-800">{c.customerName}</span>
@@ -138,14 +144,14 @@ const Customers = () => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => setModal({ mode: 'edit', data: { ...c } })}
-                          className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all"
+                          className="p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(c.customerId)}
                           disabled={deletingId === c.customerId}
-                          className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 transition-all"
                         >
                           {deletingId === c.customerId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                         </button>

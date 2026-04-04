@@ -96,11 +96,11 @@ const Coupons = () => {
                     </div>
                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all">
                       <button onClick={() => setModal({ ...c, mode: 'edit' })} 
-                        className="p-2 rounded-lg text-slate-300 hover:text-brand hover:bg-brand/5 transition-all">
+                        className="p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all">
                         <Edit className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(c.couponId)} disabled={deletingId === c.couponId}
-                        className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                        className="p-2 rounded-xl text-rose-600 bg-rose-50 hover:bg-rose-100 hover:text-rose-700 transition-all">
                         {deletingId === c.couponId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </button>
                     </div>

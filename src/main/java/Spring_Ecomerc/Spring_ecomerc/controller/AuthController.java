@@ -32,4 +32,10 @@ public class AuthController {
         AuthResponse response = authService.registerCustomer(request);
         return ResponseEntity.ok(ApiResponse.success("Registration successful", response));
     }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<String>> resetPassword(@Valid @RequestBody PasswordResetRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password reset successful"));
+    }
 }

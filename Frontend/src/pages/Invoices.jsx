@@ -118,7 +118,7 @@ const Invoices = () => {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <button onClick={() => setViewModal(order)} className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all">
+                      <button onClick={() => setViewModal(order)} className="p-2 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all">
                         <Eye className="w-4 h-4" />
                       </button>
                     </td>
