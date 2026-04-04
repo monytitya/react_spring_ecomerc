@@ -11,6 +11,8 @@ const CatalogPage = () => {
   const [manufacturers, setManufacturers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => {
@@ -29,6 +31,46 @@ const CatalogPage = () => {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const isCat = modal.type === 'categories';
+      const apiPath = isCat ? catalogApi.admin.createCategory : catalogApi.admin.createManufacturer;
+      const apiPathUpdate = isCat ? catalogApi.admin.updateCategory : catalogApi.admin.updateManufacturer;
+      
+      const { imgFile, ...restData } = modal.data;
+      const payloadKey = isCat ? 'category' : 'manufacturer';
+      
+      const formData = new FormData();
+      formData.append(payloadKey, JSON.stringify(restData));
+      if (imgFile) formData.append('image', imgFile);
+
+      if (modal.mode === 'create') {
+        await apiPath(formData);
+        showToast(`${isCat ? 'Category' : 'Manufacturer'} created!`);
+      } else {
+        const id = isCat ? restData.catId : restData.manufacturerId;
+        await apiPathUpdate(id, formData);
+        showToast(`${isCat ? 'Category' : 'Manufacturer'} updated!`);
+      }
+      setModal(null);
+      load();
+    } catch { showToast('Save failed', 'error'); }
+    finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id, isCat) => {
+    if (!window.confirm('Delete this item?')) return;
+    setDeletingId(id);
+    try {
+      const apiPath = isCat ? catalogApi.admin.deleteCategory : catalogApi.admin.deleteManufacturer;
+      await apiPath(id);
+      showToast('Deleted item successfully!');
+      load();
+    } catch { showToast('Delete failed, possibly in use.', 'error'); }
+    finally { setDeletingId(null); }
+  };
 
   const items = tab === 'categories' ? categories : manufacturers;
   const idKey = tab === 'categories' ? 'catId' : 'manufacturerId';
@@ -109,11 +151,19 @@ const CatalogPage = () => {
                       </td>
                       <td className="px-5 py-4 text-slate-600 font-medium">{item.productCount || 0}</td>
                       <td className="px-5 py-4">
-                        <button
-                          onClick={() => setModal({ type: tab, data: { ...item }, mode: 'view' })}
-                          className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            onClick={() => setModal({ type: tab, data: { ...item }, mode: 'edit' })}
+                            className="p-2 rounded-lg text-slate-400 hover:text-brand hover:bg-brand/10 transition-all">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item[idKey], tab === 'categories')}
+                            disabled={deletingId === item[idKey]}
+                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all">
+                            {deletingId === item[idKey] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -127,42 +177,58 @@ const CatalogPage = () => {
         }
       </div>
 
-      {/* Info Modal (view/create — backend doesn't expose create/update for categories via REST in current version) */}
+      {/* Info Form Modal */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold text-slate-900">
-                {modal.mode === 'create' ? `New ${modal.type === 'categories' ? 'Category' : 'Manufacturer'}` : modal.data[titleKey]}
+                {modal.mode === 'create' ? `New ${modal.type === 'categories' ? 'Category' : 'Manufacturer'}` : 'Edit ' + (modal.type === 'categories' ? 'Category' : 'Manufacturer')}
               </h2>
               <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
             </div>
+            
             <div className="space-y-4">
-              {modal.data[imageKey] && (
-                <div className="w-full h-32 rounded-2xl overflow-hidden border border-slate-100">
-                  <img src={fileUrl(modal.data[imageKey])} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Title</p>
-                  <p className="font-bold text-slate-800">{modal.data[titleKey]}</p>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Featured</p>
-                  <p className="font-bold text-slate-800">{modal.data[topKey] === 'yes' ? '⭐ Yes' : 'No'}</p>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Products</p>
-                  <p className="font-bold text-slate-800">{modal.data.productCount || 0}</p>
-                </div>
-                <div className="bg-slate-50 rounded-xl p-4">
-                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">ID</p>
-                  <p className="font-bold text-slate-800 font-mono">{modal.data[idKey]}</p>
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Title *</label>
+                <input value={modal.data[titleKey]} onChange={e => setModal({ ...modal, data: { ...modal.data, [titleKey]: e.target.value } })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand" placeholder="Title..." />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Image</label>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200 overflow-hidden shrink-0">
+                    {modal.data.imgFile ? (
+                      <img src={URL.createObjectURL(modal.data.imgFile)} alt="preview" className="w-full h-full object-cover" />
+                    ) : modal.data[imageKey] ? (
+                      <img src={fileUrl(modal.data[imageKey])} alt="existing" className="w-full h-full object-cover" />
+                    ) : (
+                      <Upload className="w-5 h-5 text-slate-300" />
+                    )}
+                  </div>
+                  <input type="file" accept="image/*" 
+                    onChange={e => setModal({ ...modal, data: { ...modal.data, imgFile: e.target.files[0] } })}
+                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-brand/10 file:text-brand hover:file:bg-brand/20 transition-all cursor-pointer" />
                 </div>
               </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Featured</label>
+                <select value={modal.data[topKey]} onChange={e => setModal({ ...modal, data: { ...modal.data, [topKey]: e.target.value } })}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </div>
             </div>
-            <button onClick={() => setModal(null)} className="w-full mt-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Close</button>
+
+            <div className="flex space-x-3 mt-8">
+              <button onClick={() => setModal(null)} className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="flex-1 py-3 bg-brand text-white rounded-xl font-bold flex items-center justify-center hover:bg-brand/90">
+                {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
+              </button>
+            </div>
           </div>
         </div>
       )}

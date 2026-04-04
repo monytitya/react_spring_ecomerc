@@ -81,6 +81,8 @@ export const customerApi = {
   getAll: () => api.get('/customers/admin/all'),
   getById: (id) => api.get(`/customers/${id}`),
   update: (id, data) => api.put(`/customers/${id}`, data),
+  delete: (id) => api.delete(`/customers/${id}`),
+  create: (data) => api.post('/customers/admin/create', data),
   uploadImage: (id, file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -100,12 +102,21 @@ export const catalogApi = {
   getCategoryById: (id) => api.get(`/categories/${id}`),
   getManufacturers: () => api.get('/manufacturers'),
   getTopManufacturers: () => api.get('/manufacturers/top'),
+  admin: {
+    createCategory: (formData) => api.post('/admin/categories', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    updateCategory: (id, formData) => api.put(`/admin/categories/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    deleteCategory: (id) => api.delete(`/admin/categories/${id}`),
+    createManufacturer: (formData) => api.post('/admin/manufacturers', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    updateManufacturer: (id, formData) => api.put(`/admin/manufacturers/${id}`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    deleteManufacturer: (id) => api.delete(`/admin/manufacturers/${id}`),
+  }
 };
 
 
 export const couponApi = {
   getAll: () => api.get('/coupons/admin/all'),
   create: (coupon) => api.post('/coupons/admin', coupon),
+  update: (id, coupon) => api.put(`/coupons/admin/${id}`, coupon),
   delete: (id) => api.delete(`/coupons/admin/${id}`),
   validate: (code) => api.get(`/coupons/validate/${code}`),
   apply: (code) => api.post(`/coupons/apply/${code}`),

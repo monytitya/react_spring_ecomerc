@@ -17,6 +17,10 @@ public class CustomerOrder {
     @Column(name = "order_id")
     private Integer orderId;
 
+    @ManyToOne
+    @JoinColumn(name = "customer_id", insertable = false, updatable = false)
+    private Customer customer;
+
     @Column(name = "customer_id")
     private Integer customerId;
 

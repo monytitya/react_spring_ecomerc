@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { couponApi } from '../services/api';
-import { Gift, Plus, Trash2, X, Save, Loader2, Tag, Percent } from 'lucide-react';
+import { Gift, Plus, Trash2, X, Save, Edit, Loader2, Tag, Percent } from 'lucide-react';
 
-const emptyCoupon = { couponCode: '', couponDiscount: '', couponLimit: '', couponStatus: 'active' };
+const emptyCoupon = { couponTitle: 'Special Discount', couponCode: '', couponPrice: '', couponLimit: '', mode: 'create' };
 
 const Coupons = () => {
   const [coupons, setCoupons] = useState([]);
@@ -31,16 +31,23 @@ const Coupons = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await couponApi.create({
+      const payload = {
+        couponTitle: modal.couponTitle || 'Special Discount',
         couponCode: modal.couponCode,
-        couponDiscount: Number(modal.couponDiscount),
-        couponLimit: Number(modal.couponLimit),
-        couponStatus: modal.couponStatus,
-      });
-      showToast('Coupon created!');
+        couponPrice: String(modal.couponPrice || 0),
+        couponLimit: Number(modal.couponLimit || 0)
+      };
+      
+      if (modal.mode === 'edit') {
+        await couponApi.update(modal.couponId, payload);
+        showToast('Coupon updated!');
+      } else {
+        await couponApi.create(payload);
+        showToast('Coupon created!');
+      }
       setModal(null);
       load();
-    } catch (e) { showToast(e.response?.data?.message || 'Create failed', 'error'); }
+    } catch (e) { showToast(e.response?.data?.message || 'Save failed', 'error'); }
     finally { setSaving(false); }
   };
 
@@ -87,28 +94,34 @@ const Coupons = () => {
                     <div className="w-12 h-12 bg-brand/10 rounded-2xl flex items-center justify-center">
                       <Gift className="w-6 h-6 text-brand" />
                     </div>
-                    <button onClick={() => handleDelete(c.couponId)} disabled={deletingId === c.couponId}
-                      className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100">
-                      {deletingId === c.couponId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                    </button>
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={() => setModal({ ...c, mode: 'edit' })} 
+                        className="p-2 rounded-lg text-slate-300 hover:text-brand hover:bg-brand/5 transition-all">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDelete(c.couponId)} disabled={deletingId === c.couponId}
+                        className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all">
+                        {deletingId === c.couponId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-4">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Coupon Code</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{c.couponTitle}</p>
                     <h3 className="text-2xl font-black text-slate-900 tracking-widest font-mono">{c.couponCode}</h3>
                   </div>
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
                     <div className="text-center">
                       <p className="text-xs text-slate-400 font-medium">Discount</p>
-                      <p className="text-xl font-black text-brand">{c.couponDiscount}%</p>
+                      <p className="text-xl font-black text-brand">{c.couponPrice}%</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-xs text-slate-400 font-medium">Limit</p>
-                      <p className="text-xl font-black text-slate-700">{c.couponLimit || '∞'}</p>
+                      <p className="text-xs text-slate-400 font-medium">Used</p>
+                      <p className="text-xl font-black text-slate-700">{c.couponUsed}/{c.couponLimit || '∞'}</p>
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-slate-400 font-medium">Status</p>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${c.couponStatus === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {c.couponStatus}
+                    <div className="text-center flex flex-col items-center">
+                      <p className="text-xs text-slate-400 font-medium mb-1">Status</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(c.couponLimit && c.couponUsed >= c.couponLimit) ? 'bg-slate-100 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {(c.couponLimit && c.couponUsed >= c.couponLimit) ? 'EXHAUSTED' : 'ACTIVE'}
                       </span>
                     </div>
                   </div>
@@ -122,15 +135,24 @@ const Coupons = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Create Coupon</h2>
+              <h2 className="text-xl font-bold text-slate-900">{modal.mode === 'edit' ? 'Edit Coupon' : 'Create Coupon'}</h2>
               <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Title / Name</label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input value={modal.couponTitle || ''} onChange={e => setModal({ ...modal, couponTitle: e.target.value })}
+                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                    placeholder="Special Discount" />
+                </div>
+              </div>
+              <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Coupon Code</label>
                 <div className="relative">
                   <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input value={modal.couponCode} onChange={e => setModal({ ...modal, couponCode: e.target.value.toUpperCase() })}
+                  <input value={modal.couponCode || ''} onChange={e => setModal({ ...modal, couponCode: e.target.value.toUpperCase().replace(/\s+/g, '') })}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     placeholder="SAVE20" />
                 </div>
@@ -139,24 +161,16 @@ const Coupons = () => {
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Discount (%)</label>
                 <div className="relative">
                   <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input type="number" min={1} max={100} value={modal.couponDiscount} onChange={e => setModal({ ...modal, couponDiscount: e.target.value })}
+                  <input type="number" min={1} max={100} value={modal.couponPrice || ''} onChange={e => setModal({ ...modal, couponPrice: e.target.value })}
                     className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
                     placeholder="10" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Usage Limit</label>
-                <input type="number" min={1} value={modal.couponLimit} onChange={e => setModal({ ...modal, couponLimit: e.target.value })}
+                <input type="number" min={1} value={modal.couponLimit || ''} onChange={e => setModal({ ...modal, couponLimit: e.target.value })}
                   className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
-                  placeholder="100 (leave blank for unlimited)" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Status</label>
-                <select value={modal.couponStatus} onChange={e => setModal({ ...modal, couponStatus: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand">
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
+                  placeholder="100 (auto-disable when reached)" />
               </div>
             </div>
             <div className="flex space-x-3 mt-8">

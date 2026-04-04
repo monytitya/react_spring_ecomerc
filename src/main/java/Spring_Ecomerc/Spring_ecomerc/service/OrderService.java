@@ -21,8 +21,6 @@ public class OrderService {
     private final CustomerOrderRepository customerOrderRepository;
     private final PendingOrderRepository pendingOrderRepository;
     private final CartRepository cartRepository;
-    private final CustomerRepository customerRepository;
-    private final ProductRepository productRepository;
 
     @Transactional
     public OrderModel placeOrder(PlaceOrderRequest request, String ipAddress) {
@@ -42,7 +40,7 @@ public class OrderService {
         PendingOrder pendingOrder = PendingOrder.builder()
                 .customerId(request.getCustomerId())
                 .invoiceNo(invoiceNo)
-                .productId(String.valueOf(request.getProductId()))
+                .productId(request.getProductId())
                 .qty(request.getQty())
                 .size(request.getSize())
                 .orderStatus("pending")
@@ -80,14 +78,20 @@ public class OrderService {
         model.setOrderDate(order.getOrderDate());
         model.setOrderStatus(order.getOrderStatus());
         
-        customerRepository.findById(order.getCustomerId()).ifPresent(c -> model.setCustomerName(c.getCustomerName()));
+        if (order.getCustomer() != null) {
+            model.setCustomerName(order.getCustomer().getCustomerName());
+        } else {
+            model.setCustomerName("Unknown Customer (ID: " + order.getCustomerId() + ")");
+        }
         
         // Find product from pending_orders for display
         pendingOrderRepository.findByInvoiceNo(order.getInvoiceNo()).stream().findFirst().ifPresent(po -> {
             model.setProductId(po.getProductId());
-            try {
-                productRepository.findById(Integer.parseInt(po.getProductId())).ifPresent(p -> model.setProductTitle(p.getProductTitle()));
-            } catch (Exception e) {}
+            if (po.getProduct() != null) {
+                model.setProductTitle(po.getProduct().getProductTitle());
+            } else {
+                model.setProductTitle("Unknown Product (ID: " + po.getProductId() + ")");
+            }
         });
         
         return model;

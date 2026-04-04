@@ -36,7 +36,27 @@ public class CouponService {
         if (couponRepository.findByCouponCode(coupon.getCouponCode()).isPresent()) {
             throw new RuntimeException("Coupon code '" + coupon.getCouponCode() + "' is already taken! Please choose a different code.");
         }
+        if (coupon.getCouponUsed() == null) coupon.setCouponUsed(0);
         return couponRepository.save(coupon);
+    }
+
+    public Coupon updateCoupon(Integer id, Coupon couponDetails) {
+        Coupon existing = couponRepository.findById(id).orElseThrow(() -> new RuntimeException("Coupon not found"));
+        
+        if (!existing.getCouponCode().equals(couponDetails.getCouponCode()) && 
+            couponRepository.findByCouponCode(couponDetails.getCouponCode()).isPresent()) {
+            throw new RuntimeException("Coupon code '" + couponDetails.getCouponCode() + "' is already taken!");
+        }
+        
+        existing.setCouponTitle(couponDetails.getCouponTitle());
+        existing.setCouponCode(couponDetails.getCouponCode());
+        existing.setCouponPrice(couponDetails.getCouponPrice());
+        existing.setCouponLimit(couponDetails.getCouponLimit());
+        if(couponDetails.getProductId() != null) {
+            existing.setProductId(couponDetails.getProductId());
+        }
+        
+        return couponRepository.save(existing);
     }
 
     public void deleteCoupon(Integer id) {

@@ -37,6 +37,11 @@ public class CouponController {
         return ResponseEntity.ok(ApiResponse.success("Coupon created", couponService.createCoupon(coupon)));
     }
 
+    @PutMapping("/admin/{id}")
+    public ResponseEntity<ApiResponse<Coupon>> update(@PathVariable Integer id, @RequestBody Coupon coupon) {
+        return ResponseEntity.ok(ApiResponse.success("Coupon updated", couponService.updateCoupon(id, coupon)));
+    }
+
     @DeleteMapping("/admin/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer id) {
         couponService.deleteCoupon(id);

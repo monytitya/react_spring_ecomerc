@@ -8,6 +8,7 @@ import Spring_Ecomerc.Spring_ecomerc.repository.PaymentRepository;
 import Spring_Ecomerc.Spring_ecomerc.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +23,7 @@ public class CustomerController {
     private final CustomerRepository customerRepository;
     private final PaymentRepository paymentRepository;
     private final FileService fileService;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Customer>> getCustomer(@PathVariable Integer id) {
@@ -37,12 +39,44 @@ public class CustomerController {
             @RequestBody Customer updated) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
+        
+        // If email is being changed, check for uniqueness
+        if (updated.getCustomerEmail() != null && !updated.getCustomerEmail().equals(customer.getCustomerEmail())) {
+            if (customerRepository.existsByCustomerEmail(updated.getCustomerEmail())) {
+                throw new RuntimeException("Email already exists: " + updated.getCustomerEmail());
+            }
+            customer.setCustomerEmail(updated.getCustomerEmail());
+        }
+
         customer.setCustomerName(updated.getCustomerName());
         customer.setCustomerContact(updated.getCustomerContact());
         customer.setCustomerAddress(updated.getCustomerAddress());
         customer.setCustomerCity(updated.getCustomerCity());
         customer.setCustomerCountry(updated.getCustomerCountry());
         return ResponseEntity.ok(ApiResponse.success("Profile updated", customerRepository.save(customer)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteCustomer(@PathVariable Integer id) {
+        if (!customerRepository.existsById(id)) {
+            throw new RuntimeException("Customer not found");
+        }
+        customerRepository.deleteById(id);
+        return ResponseEntity.ok(ApiResponse.success("Customer deleted", null));
+    }
+
+    @PostMapping("/admin/create")
+    public ResponseEntity<ApiResponse<Customer>> adminCreateCustomer(@RequestBody Customer customer) {
+        if (customerRepository.existsByCustomerEmail(customer.getCustomerEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+        // Default password for admin-created customers if not provided
+        if (customer.getCustomerPass() == null || customer.getCustomerPass().isEmpty()) {
+            customer.setCustomerPass(passwordEncoder.encode("123456"));
+        } else {
+            customer.setCustomerPass(passwordEncoder.encode(customer.getCustomerPass()));
+        }
+        return ResponseEntity.ok(ApiResponse.success("Customer created", customerRepository.save(customer)));
     }
 
     @PostMapping(value = "/{id}/image", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)

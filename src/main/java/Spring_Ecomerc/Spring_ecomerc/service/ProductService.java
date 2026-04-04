@@ -141,13 +141,19 @@ public class ProductService {
         model.setStatus(product.getStatus());
         
         model.setCatId(product.getCatId());
-        categoryRepository.findById(product.getCatId()).ifPresent(c -> model.setCatTitle(c.getCatTitle()));
+        if (product.getCatId() != null) {
+            categoryRepository.findById(product.getCatId()).ifPresent(c -> model.setCatTitle(c.getCatTitle()));
+        }
         
         model.setPCatId(product.getPCatId());
-        productCategoryRepository.findById(product.getPCatId()).ifPresent(pc -> model.setPCatTitle(pc.getPCatTitle()));
+        if (product.getPCatId() != null) {
+            productCategoryRepository.findById(product.getPCatId()).ifPresent(pc -> model.setPCatTitle(pc.getPCatTitle()));
+        }
         
         model.setManufacturerId(product.getManufacturerId());
-        manufacturerRepository.findById(product.getManufacturerId()).ifPresent(m -> model.setManufacturerTitle(m.getManufacturerTitle()));
+        if (product.getManufacturerId() != null) {
+            manufacturerRepository.findById(product.getManufacturerId()).ifPresent(m -> model.setManufacturerTitle(m.getManufacturerTitle()));
+        }
         
         model.setDate(product.getDate());
         

@@ -17,6 +17,6 @@ public class OrderModel {
     private String size;
     private LocalDateTime orderDate;
     private String orderStatus;
-    private String productId;
+    private Integer productId;
     private String productTitle;
 }

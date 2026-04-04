@@ -94,9 +94,9 @@ const Products = () => {
         productKeywords: modal.data.productKeywords,
         productLabel: modal.data.productLabel,
         status: modal.data.status,
-        catId: Number(modal.data.catId),
-        pCatId: Number(modal.data.pCatId) || null,
-        manufacturerId: Number(modal.data.manufacturerId) || null,
+        catId: modal.data.catId ? Number(modal.data.catId) : null,
+        pCatId: modal.data.pCatId ? Number(modal.data.pCatId) : null,
+        manufacturerId: modal.data.manufacturerId ? Number(modal.data.manufacturerId) : null,
       })], { type: 'application/json' });
       formData.append('product', productBlob);
       if (imgFiles.img1) formData.append('img1', imgFiles.img1);
@@ -226,12 +226,12 @@ const Products = () => {
 
             {/* Image Upload Row */}
             <div className="flex gap-4 mb-6">
-              {['img1', 'img2', 'img3'].map((key, idx) => (
+              {['img1'].map((key) => (
                 <label key={key} className="flex-1 cursor-pointer">
-                  <div className={`h-24 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${imgPreviews[key] ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
+                  <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${imgPreviews[key] ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
                     {imgPreviews[key]
-                      ? <img src={imgPreviews[key]} alt="" className="w-full h-full object-cover" />
-                      : <div className="text-center"><Upload className="w-5 h-5 text-slate-300 mx-auto" /><p className="text-xs text-slate-400 mt-1">Image {idx + 1}</p></div>
+                      ? <img src={imgPreviews[key]} alt="" className="w-full h-full object-contain" />
+                      : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Upload Product Image</p></div>
                     }
                   </div>
                   <input type="file" accept="image/*" className="hidden" onChange={e => handleImgChange(key, e.target.files[0])} />

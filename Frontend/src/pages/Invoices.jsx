@@ -50,9 +50,9 @@ const Invoices = () => {
     .reduce((sum, o) => sum + (o.dueAmount || 0), 0);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 print:hidden">
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'}`}>
+        <div className={`fixed top-6 right-6 z-50 px-6 py-3 rounded-xl shadow-lg text-white text-sm font-medium ${toast.type === 'error' ? 'bg-red-500' : 'bg-emerald-500'} print:hidden`}>
           {toast.msg}
         </div>
       )}
@@ -105,8 +105,8 @@ const Invoices = () => {
                 {filtered.map(order => (
                   <tr key={order.orderId} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-4 font-mono text-xs font-bold text-brand">#{order.invoiceNo}</td>
-                    <td className="px-5 py-4 font-semibold text-slate-800">{order.customerName}</td>
-                    <td className="px-5 py-4 text-slate-600 max-w-[160px] truncate">{order.productTitle}</td>
+                    <td className="px-5 py-4 font-semibold text-slate-800">{order.customerName || 'Guest User'}</td>
+                    <td className="px-5 py-4 text-slate-600 max-w-[160px] truncate">{order.productTitle || 'Unknown Product'}</td>
                     <td className="px-5 py-4 text-slate-600">{order.qty}</td>
                     <td className="px-5 py-4 font-bold text-slate-800">${order.dueAmount?.toLocaleString()}</td>
                     <td className="px-5 py-4 text-slate-500 text-xs whitespace-nowrap">
@@ -133,62 +133,104 @@ const Invoices = () => {
         )}
       </div>
 
-      {/* Invoice Detail Modal */}
+      {/* Invoice Detail Modal for Web View & Print Layout */}
       {viewModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-8">
-            <div className="flex justify-between items-center mb-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:bg-white print:backdrop-blur-none print:p-0">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 print:shadow-none print:max-w-none print:p-8">
+            
+            {/* Header / Actions: Hidden strictly on print */}
+            <div className="flex justify-between items-center mb-6 print:hidden">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">Invoice Detail</h2>
                 <p className="text-sm text-slate-400 font-mono mt-0.5">#{viewModal.invoiceNo}</p>
               </div>
-              <button onClick={() => setViewModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
+              <div className="flex items-center space-x-3">
+                <button 
+                  onClick={() => window.print()} 
+                  className="px-4 py-2 bg-brand text-white font-bold rounded-lg hover:bg-brand/90 transition-all text-sm flex items-center shadow-lg shadow-brand/20">
+                  <FileText className="w-4 h-4 mr-2" /> Print Invoice
+                </button>
+                <button onClick={() => setViewModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 rounded-2xl p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <User className="w-4 h-4 text-brand" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer</p>
-                  </div>
-                  <p className="font-bold text-slate-800">{viewModal.customerName}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">ID: {viewModal.customerId}</p>
+            {/* Printable Invoice Document */}
+            <div className="space-y-8">
+              
+              {/* Invoice Header */}
+              <div className="flex justify-between">
+                <div>
+                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">INVOICE</h1>
+                  <p className="text-slate-500 font-mono mt-1 pr-4">#{viewModal.invoiceNo}</p>
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Package className="w-4 h-4 text-violet-500" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Product</p>
-                  </div>
-                  <p className="font-bold text-slate-800 truncate">{viewModal.productTitle}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">Qty: {viewModal.qty} {viewModal.size && `• Size: ${viewModal.size}`}</p>
+                <div className="text-right">
+                  <h2 className="text-xl font-bold text-brand">Blueberry CRM</h2>
+                  <p className="text-sm text-slate-500 mt-1">123 E-Commerce Blvd</p>
+                  <p className="text-sm text-slate-500">Suite 400, Tech City</p>
                 </div>
-                <div className="bg-emerald-50 rounded-2xl p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-emerald-500" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Amount Due</p>
-                  </div>
-                  <p className="font-black text-2xl text-emerald-600">${viewModal.dueAmount?.toLocaleString()}</p>
+              </div>
+
+              {/* Bill To & Details */}
+              <div className="grid grid-cols-2 gap-8 border-y border-slate-100 py-6">
+                <div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Billed To</p>
+                  <p className="font-bold text-slate-800 text-lg">{viewModal.customerName || 'Guest User'}</p>
+                  <p className="text-sm text-slate-500 mt-1">Customer ID: {viewModal.customerId}</p>
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Order Date</p>
-                  </div>
-                  <p className="font-bold text-slate-800">
-                    {viewModal.orderDate ? new Date(viewModal.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                <div className="text-right">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Order Details</p>
+                  <p className="text-sm font-semibold text-slate-800">
+                    Date: <span className="font-normal text-slate-500 ml-2">
+                       {viewModal.orderDate ? new Date(viewModal.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}
+                    </span>
+                  </p>
+                  <p className="text-sm font-semibold text-slate-800 mt-1">
+                    Status: <span className="font-bold text-brand ml-2 uppercase text-xs tracking-wider">{viewModal.orderStatus}</span>
                   </p>
                 </div>
               </div>
-              <div className="flex items-center justify-between bg-brand/5 rounded-2xl p-4">
-                <span className="text-sm font-bold text-slate-500">Order Status</span>
-                <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${STATUS_COLORS[viewModal.orderStatus] || 'bg-slate-100 text-slate-500'}`}>
-                  {viewModal.orderStatus}
-                </span>
+
+              {/* Items Table */}
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-slate-200">
+                    <th className="py-3 text-xs font-bold text-slate-400 uppercase tracking-wider">Item Description</th>
+                    <th className="py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Size</th>
+                    <th className="py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Qty</th>
+                    <th className="py-3 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  <tr>
+                    <td className="py-4 font-semibold text-slate-800">{viewModal.productTitle || 'Unknown Product'}</td>
+                    <td className="py-4 text-slate-500 text-center">{viewModal.size || '—'}</td>
+                    <td className="py-4 text-slate-500 text-center">{viewModal.qty}</td>
+                    <td className="py-4 font-bold text-slate-800 text-right">${viewModal.dueAmount?.toLocaleString()}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Totals */}
+              <div className="flex justify-end pt-4">
+                <div className="w-64 space-y-3">
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Subtotal</span>
+                    <span>${viewModal.dueAmount?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-500">
+                    <span>Tax (0%)</span>
+                    <span>$0.00</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-black text-slate-900 border-t border-slate-200 pt-3">
+                    <span>Total</span>
+                    <span>${viewModal.dueAmount?.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
+
             </div>
 
-            <button onClick={() => setViewModal(null)} className="w-full mt-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50">Close</button>
+            <button onClick={() => setViewModal(null)} className="w-full mt-8 py-3 border border-slate-200 rounded-xl text-slate-600 font-medium hover:bg-slate-50 print:hidden">Close</button>
           </div>
         </div>
       )}

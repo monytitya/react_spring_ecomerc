@@ -16,14 +16,22 @@ public class PendingOrder {
     @Column(name = "order_id")
     private Integer orderId;
 
+    @ManyToOne
+    @JoinColumn(name = "customer_id", insertable = false, updatable = false)
+    private Customer customer;
+
     @Column(name = "customer_id")
     private Integer customerId;
 
     @Column(name = "invoice_no")
     private Long invoiceNo;
 
-    @Column(name = "product_id", columnDefinition = "TEXT")
-    private String productId;
+    @ManyToOne
+    @JoinColumn(name = "product_id", insertable = false, updatable = false)
+    private Product product;
+
+    @Column(name = "product_id")
+    private Integer productId;
 
     @Column(name = "qty")
     private Integer qty;
