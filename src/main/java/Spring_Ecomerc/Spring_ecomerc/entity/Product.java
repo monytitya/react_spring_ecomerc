@@ -35,14 +35,12 @@ public class Product {
     @Column(name = "product_url", columnDefinition = "TEXT")
     private String productUrl;
 
-    @Column(name = "product_img1", columnDefinition = "TEXT")
-    private String productImg1;
+    @Column(name = "product_img", columnDefinition = "TEXT")
+    private String productImg;
 
-    @Column(name = "product_img2", columnDefinition = "TEXT")
-    private String productImg2;
+    @Column(name = "product_file", columnDefinition = "TEXT")
+    private String productFile;
 
-    @Column(name = "product_img3", columnDefinition = "TEXT")
-    private String productImg3;
 
     @Column(name = "product_price")
     private Integer productPrice;

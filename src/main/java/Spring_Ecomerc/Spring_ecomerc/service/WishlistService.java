@@ -43,10 +43,11 @@ public class WishlistService {
         
         productRepository.findById(wishlist.getProductId()).ifPresent(p -> {
             model.setProductTitle(p.getProductTitle());
-            model.setProductImg1(p.getProductImg1());
+            model.setProductImg(p.getProductImg());
             model.setProductPrice(p.getProductPrice());
             model.setProductLabel(p.getProductLabel());
         });
+
         
         return model;
     }

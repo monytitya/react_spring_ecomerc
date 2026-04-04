@@ -9,7 +9,7 @@ import lombok.*;
 public class CartModel {
     private Integer pId;
     private String productTitle;
-    private String productImg1;
+    private String productImg;
     private Integer productPrice;
     private Integer qty;
     private String size;

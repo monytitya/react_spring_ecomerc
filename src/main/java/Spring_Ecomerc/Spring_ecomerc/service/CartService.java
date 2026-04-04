@@ -42,7 +42,7 @@ public class CartService {
         
         productRepository.findById(cart.getPId()).ifPresent(p -> {
             model.setProductTitle(p.getProductTitle());
-            model.setProductImg1(p.getProductImg1());
+            model.setProductImg(p.getProductImg());
             model.setProductPrice(p.getProductPrice());
             model.setSubtotal(p.getProductPrice() * cart.getQty());
         });

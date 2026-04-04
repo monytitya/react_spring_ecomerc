@@ -153,7 +153,7 @@ const Dashboard = () => {
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 rounded-xl bg-slate-50 overflow-hidden border border-slate-100">
                     <img 
-                      src={fileUrl(product.productImg1)} 
+                      src={fileUrl(product.productImg)} 
                       alt={product.productTitle} 
                       className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500" 
                       onError={(e) => e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop'}

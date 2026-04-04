@@ -22,13 +22,13 @@ public class AdminProductController {
     @io.swagger.v3.oas.annotations.Operation(summary = "Create product with real files")
     public ResponseEntity<ApiResponse<ProductModel>> create(
             @RequestPart("product") String productString,
-            @RequestPart(value = "img1", required = false) MultipartFile img1,
-            @RequestPart(value = "img2", required = false) MultipartFile img2,
-            @RequestPart(value = "img3", required = false) MultipartFile img3) {
+            @RequestPart(value = "img", required = false) MultipartFile img,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
         try {
             Product product = objectMapper.readValue(productString, Product.class);
-            ProductModel created = productService.createProduct(product, img1, img2, img3);
+            ProductModel created = productService.createProduct(product, img, file);
             return ResponseEntity.ok(ApiResponse.success("Product created via Multipart (Files)", created));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to parse product data: " + e.getMessage()));
@@ -39,10 +39,10 @@ public class AdminProductController {
     public ResponseEntity<ApiResponse<ProductModel>> createJson(
             @RequestBody Spring_Ecomerc.Spring_ecomerc.dto.ProductRequest request) {
         try {
-            ProductModel created = productService.createProductBase64(request.getProduct(), request.getImg1(),
-                    request.getImg2(),
-                    request.getImg3());
+            ProductModel created = productService.createProductBase64(request.getProduct(), request.getImg(),
+                    request.getFile());
             return ResponseEntity.ok(ApiResponse.success("Product created via JSON (Base64)", created));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create product: " + e.getMessage()));
         }
@@ -52,19 +52,20 @@ public class AdminProductController {
     public ResponseEntity<ApiResponse<ProductModel>> update(
             @PathVariable Integer id,
             @RequestPart("product") String productString,
-            @RequestPart(value = "img1", required = false) MultipartFile img1,
-            @RequestPart(value = "img2", required = false) MultipartFile img2,
-            @RequestPart(value = "img3", required = false) MultipartFile img3) {
+            @RequestPart(value = "img", required = false) MultipartFile img,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
         try {
             Product product = objectMapper.readValue(productString, Product.class);
-            ProductModel updated = productService.updateProduct(id, product, img1, img2, img3);
+            ProductModel updated = productService.updateProduct(id, product, img, file);
             return ResponseEntity.ok(ApiResponse.success("Product updated", updated));
+
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to update product: " + e.getMessage()));
         }
     }
 
     @DeleteMapping("/products/{id}")
+
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Integer id) {
         try {
             productService.deleteProduct(id);

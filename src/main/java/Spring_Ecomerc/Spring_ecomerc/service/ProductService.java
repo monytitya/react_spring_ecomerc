@@ -26,6 +26,7 @@ public class ProductService {
     private final ManufacturerRepository manufacturerRepository;
     private final FileService fileService;
 
+
     public Page<ProductModel> getAllProducts(int page, int size, String sortBy) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<Product> productPage = productRepository.findAll(pageable);
@@ -62,49 +63,47 @@ public class ProductService {
         return productRepository.findByProductTitleContainingIgnoreCase(keyword).stream().map(this::mapToModel).collect(Collectors.toList());
     }
 
-    public ProductModel createProduct(Product product, MultipartFile img1, MultipartFile img2, MultipartFile img3) throws IOException {
+    public ProductModel createProduct(Product product, MultipartFile img, MultipartFile file) throws IOException {
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
-        if (img1 != null && !img1.isEmpty()) product.setProductImg1(fileService.uploadFile(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) product.setProductImg2(fileService.uploadFile(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) product.setProductImg3(fileService.uploadFile(img3, "products"));
+        if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadFile(img, "products"));
+        if (file != null && !file.isEmpty()) product.setProductFile(fileService.uploadFile(file, "products"));
         return mapToModel(productRepository.save(product));
     }
 
-    public ProductModel createProductBase64(Product product, String img1, String img2, String img3) throws IOException {
+    public ProductModel createProductBase64(Product product, String img, String file) throws IOException {
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
-        if (img1 != null && !img1.isEmpty()) product.setProductImg1(fileService.uploadBase64(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) product.setProductImg2(fileService.uploadBase64(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) product.setProductImg3(fileService.uploadBase64(img3, "products"));
+        if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadBase64(img, "products"));
+        if (file != null && !file.isEmpty()) product.setProductFile(fileService.uploadBase64(file, "products"));
         return mapToModel(productRepository.save(product));
     }
 
-    public ProductModel updateProduct(Integer id, Product updatedProduct, MultipartFile img1, MultipartFile img2, MultipartFile img3) throws IOException {
+
+    public ProductModel updateProduct(Integer id, Product updatedProduct, MultipartFile img, MultipartFile file) throws IOException {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
         
-        if (img1 != null && !img1.isEmpty()) existing.setProductImg1(fileService.uploadFile(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) existing.setProductImg2(fileService.uploadFile(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) existing.setProductImg3(fileService.uploadFile(img3, "products"));
+        if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadFile(img, "products"));
+        if (file != null && !file.isEmpty()) existing.setProductFile(fileService.uploadFile(file, "products"));
         
         return mapToModel(productRepository.save(existing));
     }
 
-    public ProductModel updateProductBase64(Integer id, Product updatedProduct, String img1, String img2, String img3) throws IOException {
+    public ProductModel updateProductBase64(Integer id, Product updatedProduct, String img, String file) throws IOException {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
         
-        if (img1 != null && !img1.isEmpty()) existing.setProductImg1(fileService.uploadBase64(img1, "products"));
-        if (img2 != null && !img2.isEmpty()) existing.setProductImg2(fileService.uploadBase64(img2, "products"));
-        if (img3 != null && !img3.isEmpty()) existing.setProductImg3(fileService.uploadBase64(img3, "products"));
+        if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadBase64(img, "products"));
+        if (file != null && !file.isEmpty()) existing.setProductFile(fileService.uploadBase64(file, "products"));
         
         return mapToModel(productRepository.save(existing));
     }
+
 
     private void copyProperties(Product from, Product to) {
         if (from.getProductTitle() != null) to.setProductTitle(from.getProductTitle());
@@ -128,9 +127,9 @@ public class ProductService {
         model.setProductId(product.getProductId());
         model.setProductTitle(product.getProductTitle());
         model.setProductUrl(product.getProductUrl());
-        model.setProductImg1(product.getProductImg1());
-        model.setProductImg2(product.getProductImg2());
-        model.setProductImg3(product.getProductImg3());
+        model.setProductImg(product.getProductImg());
+        model.setProductFile(product.getProductFile());
+
         model.setProductPrice(product.getProductPrice());
         model.setProductPspPrice(product.getProductPspPrice());
         model.setProductDesc(product.getProductDesc());
@@ -161,6 +160,8 @@ public class ProductService {
     }
 
     public void deleteProduct(Integer id) {
+
+
         productRepository.deleteById(id);
     }
 }

@@ -11,7 +11,7 @@ public class WishlistModel {
     private Integer customerId;
     private Integer productId;
     private String productTitle;
-    private String productImg1;
+    private String productImg;
     private Integer productPrice;
     private String productLabel;
 }

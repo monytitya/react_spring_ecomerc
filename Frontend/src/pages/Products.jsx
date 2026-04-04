@@ -20,8 +20,8 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // null | { mode: 'create'|'edit', data: {} }
   const [saving, setSaving] = useState(false);
-  const [imgPreviews, setImgPreviews] = useState({ img1: null, img2: null, img3: null });
-  const [imgFiles, setImgFiles] = useState({ img1: null, img2: null, img3: null });
+  const [previews, setPreviews] = useState({ img: null, file: null });
+  const [files, setFiles] = useState({ img: null, file: null });
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -60,24 +60,27 @@ const Products = () => {
 
   const openCreate = () => {
     setModal({ mode: 'create', data: { ...emptyProduct } });
-    setImgPreviews({ img1: null, img2: null, img3: null });
-    setImgFiles({ img1: null, img2: null, img3: null });
+    setPreviews({ img: null, file: null });
+    setFiles({ img: null, file: null });
   };
 
   const openEdit = (p) => {
     setModal({ mode: 'edit', data: { ...p } });
-    setImgPreviews({
-      img1: p.productImg1 ? fileUrl(p.productImg1) : null,
-      img2: p.productImg2 ? fileUrl(p.productImg2) : null,
-      img3: p.productImg3 ? fileUrl(p.productImg3) : null,
+    setPreviews({
+      img: p.productImg ? fileUrl(p.productImg) : null,
+      file: p.productFile ? p.productFile : null,
     });
-    setImgFiles({ img1: null, img2: null, img3: null });
+    setFiles({ img: null, file: null });
   };
 
-  const handleImgChange = (key, file) => {
+  const handleFileChange = (key, file) => {
     if (!file) return;
-    setImgFiles(prev => ({ ...prev, [key]: file }));
-    setImgPreviews(prev => ({ ...prev, [key]: URL.createObjectURL(file) }));
+    setFiles(prev => ({ ...prev, [key]: file }));
+    if (file.type.startsWith('image/')) {
+      setPreviews(prev => ({ ...prev, [key]: URL.createObjectURL(file) }));
+    } else {
+      setPreviews(prev => ({ ...prev, [key]: file.name }));
+    }
   };
 
   const handleSave = async () => {
@@ -99,9 +102,8 @@ const Products = () => {
         manufacturerId: modal.data.manufacturerId ? Number(modal.data.manufacturerId) : null,
       })], { type: 'application/json' });
       formData.append('product', productBlob);
-      if (imgFiles.img1) formData.append('img1', imgFiles.img1);
-      if (imgFiles.img2) formData.append('img2', imgFiles.img2);
-      if (imgFiles.img3) formData.append('img3', imgFiles.img3);
+      if (files.img) formData.append('img', files.img);
+      if (files.file) formData.append('file', files.file);
 
       if (modal.mode === 'create') {
         await productApi.admin.create(formData);
@@ -173,8 +175,8 @@ const Products = () => {
                   <tr key={p.productId} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-3">
                       <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden">
-                        {p.productImg1
-                          ? <img src={fileUrl(p.productImg1)} alt="" className="w-full h-full object-cover" />
+                        {p.productImg
+                          ? <img src={fileUrl(p.productImg)} alt="" className="w-full h-full object-cover" />
                           : <Package className="w-5 h-5 text-slate-300 m-auto mt-3" />}
                       </div>
                     </td>
@@ -224,19 +226,33 @@ const Products = () => {
               <button onClick={() => setModal(null)} className="p-2 rounded-lg hover:bg-slate-100"><X className="w-5 h-5" /></button>
             </div>
 
-            {/* Image Upload Row */}
+            {/* Upload Row */}
             <div className="flex gap-4 mb-6">
-              {['img1'].map((key) => (
-                <label key={key} className="flex-1 cursor-pointer">
-                  <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${imgPreviews[key] ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
-                    {imgPreviews[key]
-                      ? <img src={imgPreviews[key]} alt="" className="w-full h-full object-contain" />
-                      : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Upload Product Image</p></div>
-                    }
-                  </div>
-                  <input type="file" accept="image/*" className="hidden" onChange={e => handleImgChange(key, e.target.files[0])} />
-                </label>
-              ))}
+              {/* Image Upload */}
+              <label className="flex-1 cursor-pointer">
+                <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${previews.img ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
+                  {previews.img
+                    ? <img src={previews.img} alt="" className="w-full h-full object-contain" />
+                    : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Product Image</p></div>
+                  }
+                </div>
+                <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange('img', e.target.files[0])} />
+              </label>
+
+              {/* File Upload (PDF, etc) */}
+              <label className="flex-1 cursor-pointer">
+                <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${previews.file ? 'bg-slate-50 border-brand/20' : 'border-slate-200 hover:border-brand/40'}`}>
+                  {previews.file
+                    ? <div className="text-center px-4">
+                        <Package className="w-6 h-6 text-brand mx-auto" />
+                        <p className="text-xs font-semibold text-slate-600 mt-2 truncate w-full max-w-[150px]">{previews.file}</p>
+                        <p className="text-[10px] text-slate-400 uppercase mt-1">Click to change</p>
+                      </div>
+                    : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Downloadable File</p></div>
+                  }
+                </div>
+                <input type="file" className="hidden" onChange={e => handleFileChange('file', e.target.files[0])} />
+              </label>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

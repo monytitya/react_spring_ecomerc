@@ -11,9 +11,9 @@ public class ProductModel {
     private Integer productId;
     private String productTitle;
     private String productUrl;
-    private String productImg1;
-    private String productImg2;
-    private String productImg3;
+    private String productImg;
+    private String productFile;
+
     private Integer productPrice;
     private Integer productPspPrice;
     private String productDesc;
