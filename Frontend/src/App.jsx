@@ -13,6 +13,8 @@ import Analytics from './pages/Analytics';
 import CMS from './pages/CMS';
 import Settings from './pages/Settings';
 import Catalog from './pages/Catalog';
+import Payments from './pages/Payments';
+import Checkout from './pages/Checkout';
 
 function App() {
   return (
@@ -21,6 +23,7 @@ function App() {
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/checkout/:invoiceNo" element={<Checkout />} />
 
         {/* Protected Admin Routes */}
         <Route path="/" element={<AdminLayout />}>
@@ -31,6 +34,7 @@ function App() {
           <Route path="orders"     element={<Orders />} />
           <Route path="products"   element={<Products />} />
           <Route path="invoices"   element={<Invoices />} />
+          <Route path="payments"   element={<Payments />} />
           <Route path="coupons"    element={<Coupons />} />
           <Route path="catalog"    element={<Catalog />} />
           <Route path="cms"        element={<CMS />} />

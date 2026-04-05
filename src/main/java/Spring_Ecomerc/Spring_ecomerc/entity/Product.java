@@ -38,9 +38,6 @@ public class Product {
     @Column(name = "product_img", columnDefinition = "TEXT")
     private String productImg;
 
-    @Column(name = "product_file", columnDefinition = "TEXT")
-    private String productFile;
-
 
     @Column(name = "product_price")
     private Integer productPrice;

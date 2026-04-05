@@ -9,9 +9,10 @@ import lombok.*;
 public class PaymentModel {
     private Integer paymentId;
     private Long invoiceNo;
-    private Integer amount;
+    private Double amount;
     private String paymentMode;
-    private Long refNo;
+    private String refNo;
     private Integer code;
     private String paymentDate;
+    private String status;
 }

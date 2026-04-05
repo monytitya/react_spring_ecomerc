@@ -7,6 +7,5 @@ import lombok.Data;
 public class ProductRequest {
     private Product product;
     private String img;
-    private String file;
 
 }

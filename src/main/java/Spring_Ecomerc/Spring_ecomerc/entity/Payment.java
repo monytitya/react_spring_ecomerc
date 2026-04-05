@@ -33,4 +33,7 @@ public class Payment {
 
     @Column(name = "payment_date", columnDefinition = "TEXT")
     private String paymentDate;
+
+    @Column(name = "status", columnDefinition = "TEXT")
+    private String status = "PENDING";
 }

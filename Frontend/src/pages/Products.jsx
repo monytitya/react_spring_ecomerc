@@ -20,8 +20,8 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); // null | { mode: 'create'|'edit', data: {} }
   const [saving, setSaving] = useState(false);
-  const [previews, setPreviews] = useState({ img: null, file: null });
-  const [files, setFiles] = useState({ img: null, file: null });
+  const [previews, setPreviews] = useState({ img: null });
+  const [files, setFiles] = useState({ img: null });
   const [toast, setToast] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
@@ -60,17 +60,16 @@ const Products = () => {
 
   const openCreate = () => {
     setModal({ mode: 'create', data: { ...emptyProduct } });
-    setPreviews({ img: null, file: null });
-    setFiles({ img: null, file: null });
+    setPreviews({ img: null });
+    setFiles({ img: null });
   };
 
   const openEdit = (p) => {
     setModal({ mode: 'edit', data: { ...p } });
     setPreviews({
       img: p.productImg ? fileUrl(p.productImg) : null,
-      file: p.productFile ? p.productFile : null,
     });
-    setFiles({ img: null, file: null });
+    setFiles({ img: null });
   };
 
   const handleFileChange = (key, file) => {
@@ -103,7 +102,6 @@ const Products = () => {
       })], { type: 'application/json' });
       formData.append('product', productBlob);
       if (files.img) formData.append('img', files.img);
-      if (files.file) formData.append('file', files.file);
 
       if (modal.mode === 'create') {
         await productApi.admin.create(formData);
@@ -230,28 +228,13 @@ const Products = () => {
             <div className="flex gap-4 mb-6">
               {/* Image Upload */}
               <label className="flex-1 cursor-pointer">
-                <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${previews.img ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
+                <div className={`h-40 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${previews.img ? 'border-transparent' : 'border-slate-200 hover:border-brand/40'}`}>
                   {previews.img
                     ? <img src={previews.img} alt="" className="w-full h-full object-contain" />
                     : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Product Image</p></div>
                   }
                 </div>
                 <input type="file" accept="image/*" className="hidden" onChange={e => handleFileChange('img', e.target.files[0])} />
-              </label>
-
-              {/* File Upload (PDF, etc) */}
-              <label className="flex-1 cursor-pointer">
-                <div className={`h-32 rounded-2xl border-2 border-dashed overflow-hidden flex items-center justify-center transition-colors ${previews.file ? 'bg-slate-50 border-brand/20' : 'border-slate-200 hover:border-brand/40'}`}>
-                  {previews.file
-                    ? <div className="text-center px-4">
-                        <Package className="w-6 h-6 text-brand mx-auto" />
-                        <p className="text-xs font-semibold text-slate-600 mt-2 truncate w-full max-w-[150px]">{previews.file}</p>
-                        <p className="text-[10px] text-slate-400 uppercase mt-1">Click to change</p>
-                      </div>
-                    : <div className="text-center"><Upload className="w-6 h-6 text-slate-300 mx-auto" /><p className="text-sm font-medium text-slate-400 mt-2">Downloadable File</p></div>
-                  }
-                </div>
-                <input type="file" className="hidden" onChange={e => handleFileChange('file', e.target.files[0])} />
               </label>
             </div>
 

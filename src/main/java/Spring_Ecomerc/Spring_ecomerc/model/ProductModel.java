@@ -12,7 +12,6 @@ public class ProductModel {
     private String productTitle;
     private String productUrl;
     private String productImg;
-    private String productFile;
 
     private Integer productPrice;
     private Integer productPspPrice;

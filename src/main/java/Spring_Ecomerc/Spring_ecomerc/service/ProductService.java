@@ -63,43 +63,39 @@ public class ProductService {
         return productRepository.findByProductTitleContainingIgnoreCase(keyword).stream().map(this::mapToModel).collect(Collectors.toList());
     }
 
-    public ProductModel createProduct(Product product, MultipartFile img, MultipartFile file) throws IOException {
+    public ProductModel createProduct(Product product, MultipartFile img) throws IOException {
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
         if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadFile(img, "products"));
-        if (file != null && !file.isEmpty()) product.setProductFile(fileService.uploadFile(file, "products"));
         return mapToModel(productRepository.save(product));
     }
 
-    public ProductModel createProductBase64(Product product, String img, String file) throws IOException {
+    public ProductModel createProductBase64(Product product, String img) throws IOException {
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
         if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadBase64(img, "products"));
-        if (file != null && !file.isEmpty()) product.setProductFile(fileService.uploadBase64(file, "products"));
         return mapToModel(productRepository.save(product));
     }
 
 
-    public ProductModel updateProduct(Integer id, Product updatedProduct, MultipartFile img, MultipartFile file) throws IOException {
+    public ProductModel updateProduct(Integer id, Product updatedProduct, MultipartFile img) throws IOException {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
         
         if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadFile(img, "products"));
-        if (file != null && !file.isEmpty()) existing.setProductFile(fileService.uploadFile(file, "products"));
         
         return mapToModel(productRepository.save(existing));
     }
 
-    public ProductModel updateProductBase64(Integer id, Product updatedProduct, String img, String file) throws IOException {
+    public ProductModel updateProductBase64(Integer id, Product updatedProduct, String img) throws IOException {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
         
         if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadBase64(img, "products"));
-        if (file != null && !file.isEmpty()) existing.setProductFile(fileService.uploadBase64(file, "products"));
         
         return mapToModel(productRepository.save(existing));
     }
@@ -128,7 +124,6 @@ public class ProductService {
         model.setProductTitle(product.getProductTitle());
         model.setProductUrl(product.getProductUrl());
         model.setProductImg(product.getProductImg());
-        model.setProductFile(product.getProductFile());
 
         model.setProductPrice(product.getProductPrice());
         model.setProductPspPrice(product.getProductPspPrice());

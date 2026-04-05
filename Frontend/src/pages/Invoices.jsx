@@ -135,8 +135,8 @@ const Invoices = () => {
 
       {/* Invoice Detail Modal for Web View & Print Layout */}
       {viewModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:bg-white print:backdrop-blur-none print:p-0">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 print:shadow-none print:max-w-none print:p-8">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:block print:relative print:bg-white print:p-0">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-8 print:shadow-none print:max-w-none print:p-0 print:h-auto print:static">
             
             {/* Header / Actions: Hidden strictly on print */}
             <div className="flex justify-between items-center mb-6 print:hidden">

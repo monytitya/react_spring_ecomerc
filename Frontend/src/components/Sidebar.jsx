@@ -13,6 +13,7 @@ import {
   Files,
   Tag,
   Receipt,
+  CreditCard,
 } from 'lucide-react';
 
 const SidebarItem = ({ icon: Icon, label, to, badge }) => (
@@ -72,8 +73,9 @@ const Sidebar = () => {
             {isAdmin && <SidebarItem icon={Users}       label="Customers"  to="/customers" />}
             <SidebarItem icon={ShoppingCart} label="Orders"   to="/orders" />
             <SidebarItem icon={Package}     label="Products"   to="/products" />
-            {isAdmin && <SidebarItem icon={Receipt}     label="Invoices"   to="/invoices" />}
-            {isAdmin && <SidebarItem icon={Gift}        label="Coupons"    to="/coupons" />}
+            {isAdmin && <SidebarItem icon={FileText}     label="Invoices"   to="/invoices" />}
+            {isAdmin && <SidebarItem icon={CreditCard}   label="Payments"   to="/payments" />}
+            {isAdmin && <SidebarItem icon={Gift}         label="Coupons"    to="/coupons" />}
           </div>
         </div>
 
