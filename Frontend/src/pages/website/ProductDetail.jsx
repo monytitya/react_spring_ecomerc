@@ -33,8 +33,9 @@ const ProductDetail = () => {
       const p = r.data?.data || r.data;
       setProduct(p);
       // Related products
-      if (p?.categoryId) {
-        productApi.getByCategory(p.categoryId).then(r2 => {
+      const catId = p?.catId || p?.categoryId;
+      if (catId) {
+        productApi.getByCategory(catId).then(r2 => {
           const list = (r2.data?.data || r2.data || []).filter(x => x.productId !== p.productId);
           setRelated(list.slice(0, 4));
         }).catch(() => {});
@@ -72,10 +73,16 @@ const ProductDetail = () => {
   );
   if (!product) return null;
 
-  const image   = img(product.imageName || product.imageFile);
-  const price   = product.salePrice ?? product.price ?? 0;
-  const oldPrice = product.price && product.salePrice && product.salePrice < product.price ? product.price : null;
-  const discount = oldPrice ? Math.round((1 - price / oldPrice) * 100) : 0;
+  const image   = img(product.productImg || product.imageName || product.imageFile);
+  const currentPrice = product.productPrice ?? product.price ?? 0;
+  const oldPriceVal = product.productPspPrice ?? product.salePrice ?? 0;
+  const oldPrice = oldPriceVal > 0 && oldPriceVal > currentPrice ? oldPriceVal : null;
+  const price = currentPrice;
+  const discount = oldPrice ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
+  const title = product.productTitle || product.title;
+  const label = product.productLabel || product.label;
+  const categoryName = product.catTitle || product.categoryName;
+  const manufacturerName = product.manufacturerTitle || product.manufacturerName;
 
   return (
     <div className="min-h-screen bg-white pt-20">
@@ -86,7 +93,7 @@ const ProductDetail = () => {
           <span>/</span>
           <Link to="/shop" className="hover:text-blue-600">Shop</Link>
           <span>/</span>
-          <span className="text-slate-800 font-medium truncate max-w-xs">{product.title}</span>
+          <span className="text-slate-800 font-medium truncate max-w-xs">{title}</span>
         </div>
       </div>
 
@@ -98,7 +105,7 @@ const ProductDetail = () => {
               {image ? (
                 <img
                   src={image}
-                  alt={product.title}
+                  alt={title}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                   onError={e => { e.target.style.display='none'; }}
                 />
@@ -112,9 +119,9 @@ const ProductDetail = () => {
                   -{discount}%
                 </div>
               )}
-              {product.label && (
+              {label && (
                 <div className="absolute top-4 right-4 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl uppercase tracking-wide">
-                  {product.label}
+                  {label}
                 </div>
               )}
             </div>
@@ -128,7 +135,7 @@ const ProductDetail = () => {
                 {inWish ? 'Wishlisted' : 'Add to Wishlist'}
               </button>
               <button
-                onClick={() => navigator.share?.({ title: product.title, url: window.location.href }).catch(() => {})}
+                onClick={() => navigator.share?.({ title: title, url: window.location.href }).catch(() => {})}
                 className="px-4 py-3 rounded-2xl border-2 border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-all"
               >
                 <Share2 className="w-5 h-5" />
@@ -140,11 +147,11 @@ const ProductDetail = () => {
           <div className="flex flex-col">
             {/* Category */}
             <p className="text-blue-600 font-bold text-sm uppercase tracking-widest mb-3">
-              {product.categoryName || product.manufacturerName || 'Blueberry Collection'}
+              {categoryName || manufacturerName || 'Blueberry Collection'}
             </p>
 
             {/* Title */}
-            <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-tight mb-4">{product.title}</h1>
+            <h1 className="text-3xl lg:text-4xl font-black text-slate-900 leading-tight mb-4">{title}</h1>
 
             {/* Rating */}
             <div className="flex items-center gap-3 mb-6">
@@ -168,8 +175,8 @@ const ProductDetail = () => {
             </div>
 
             {/* Short description */}
-            {product.shortDescription && (
-              <p className="text-slate-500 text-sm leading-relaxed mb-8">{product.shortDescription}</p>
+            {(product.productDesc || product.shortDescription) && (
+              <p className="text-slate-500 text-sm leading-relaxed mb-8">{product.productDesc || product.shortDescription}</p>
             )}
 
             {/* Size Picker */}
@@ -272,7 +279,7 @@ const ProductDetail = () => {
           </div>
           {tab === 'description' && (
             <div className="prose prose-slate max-w-none text-slate-600 text-sm leading-relaxed">
-              {product.description || product.shortDescription || (
+              {product.productDesc || product.description || product.shortDescription || (
                 <p>No description available for this product.</p>
               )}
             </div>
@@ -281,9 +288,9 @@ const ProductDetail = () => {
             <div className="grid grid-cols-2 gap-4 max-w-lg">
               {[
                 ['SKU', `PRD-${product.productId}`],
-                ['Category', product.categoryName || '—'],
-                ['Brand', product.manufacturerName || '—'],
-                ['Label', product.label || '—'],
+                ['Category', categoryName || '—'],
+                ['Brand', manufacturerName || '—'],
+                ['Label', label || '—'],
                 ['Weight', '0.5 kg'],
                 ['Sizes', SIZES.join(', ')],
               ].map(([k, v]) => (
@@ -326,24 +333,28 @@ const ProductDetail = () => {
           <div>
             <h2 className="text-2xl font-black text-slate-900 mb-6">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-              {related.map(p => (
+              {related.map(p => {
+                const rpTitle = p.productTitle || p.title;
+                const rpPrice = p.productPspPrice || p.productPrice || p.salePrice || p.price || 0;
+                const rpImg = img(p.productImg || p.imageName || p.imageFile);
+                return (
                 <div
                   key={p.productId}
                   onClick={() => navigate(`/product/${p.productId}`)}
                   className="group cursor-pointer bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="aspect-square bg-slate-50 overflow-hidden">
-                    {img(p.imageName || p.imageFile)
-                      ? <img src={img(p.imageName || p.imageFile)} alt={p.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={e=>{e.target.style.display='none';}}/>
+                    {rpImg
+                      ? <img src={rpImg} alt={rpTitle} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={e=>{e.target.style.display='none';}}/>
                       : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="w-10 h-10 text-slate-200"/></div>
                     }
                   </div>
                   <div className="p-4">
-                    <h3 className="font-bold text-sm text-slate-800 line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">{p.title}</h3>
-                    <span className="font-black text-slate-900">${p.salePrice ?? p.price ?? 0}</span>
+                    <h3 className="font-bold text-sm text-slate-800 line-clamp-2 mb-1 group-hover:text-blue-600 transition-colors">{rpTitle}</h3>
+                    <span className="font-black text-slate-900">${rpPrice}</span>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}

@@ -9,9 +9,11 @@ const img  = (f) => (f ? `${BASE}${f}` : null);
 /* --- Original Beautiful Product Card --- */
 const ProductCard = ({ product }) => {
   const navigate = useNavigate();
-  const image = img(product.imageName || product.imageFile);
-  const discount = product.price && product.salePrice && product.salePrice < product.price
-    ? Math.round(((product.price - product.salePrice) / product.price) * 100) : 0;
+  const image = img(product.productImg || product.imageName || product.imageFile);
+  const currentPrice = product.productPrice ?? product.price ?? 0;
+  const oldPrice = product.productPspPrice ?? product.salePrice ?? 0;
+  const discount = oldPrice > 0 && oldPrice > currentPrice
+    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
 
   return (
     <div
@@ -25,9 +27,9 @@ const ProductCard = ({ product }) => {
           <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="w-12 h-12 text-slate-200" /></div>
         )}
         <div className="absolute top-3 left-3 flex flex-col gap-2">
-          {product.label && (
+          {(product.productLabel || product.label) && (
              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-blue-500/30">
-               {product.label}
+               {product.productLabel || product.label}
              </span>
           )}
           {discount > 0 && (
@@ -43,12 +45,12 @@ const ProductCard = ({ product }) => {
           <span className="text-xs font-bold text-slate-400 ml-1">(4.9)</span>
         </div>
         <h3 className="font-bold text-slate-800 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-          {product.title}
+          {product.productTitle || product.title}
         </h3>
         <div className="mt-auto flex items-end justify-between">
           <div>
-            <span className="text-lg font-black text-slate-900">${product.salePrice ?? product.price ?? 0}</span>
-            {discount > 0 && <span className="text-sm font-bold text-slate-400 line-through ml-2">${product.price}</span>}
+            <span className="text-lg font-black text-slate-900">${currentPrice}</span>
+            {discount > 0 && <span className="text-sm font-bold text-slate-400 line-through ml-2">${oldPrice}</span>}
           </div>
           <button className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
             <ArrowRight className="w-4 h-4" />
@@ -155,21 +157,25 @@ const Home = () => {
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {categories.slice(0, 4).map(cat => (
+              {categories.slice(0, 4).map(cat => {
+                const id = cat.catId || cat.categoryId;
+                const title = cat.catTitle || cat.name;
+                const image = cat.catImage || cat.image || cat.imageName;
+                return (
                 <div 
-                  key={cat.categoryId}
-                  onClick={() => navigate(`/shop?category=${cat.categoryId}`)}
+                  key={id}
+                  onClick={() => navigate(`/shop?category=${id}`)}
                   className="group relative h-64 rounded-3xl overflow-hidden cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
                 >
-                  <img src={img(cat.image || cat.imageName)} alt={cat.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={e=>{e.target.style.display='none';}} />
+                  <img src={img(image)} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" onError={e=>{e.target.style.display='none';}} />
                   <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent">
-                    <h3 className="text-white font-black text-xl mb-1">{cat.name}</h3>
+                    <h3 className="text-white font-black text-xl mb-1">{title}</h3>
                     <p className="text-blue-300 text-sm font-semibold flex items-center gap-1 group-hover:text-white transition-colors">
                       Explore <ChevronRight className="w-4 h-4" />
                     </p>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         </section>

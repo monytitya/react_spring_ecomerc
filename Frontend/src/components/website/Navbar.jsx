@@ -319,17 +319,18 @@ const Navbar = () => {
               ) : (
                 <div className="space-y-6">
                   {cartItems.map((item) => {
-                    const price = item.salePrice ?? item.price ?? 0;
-                    const image = img(item.imageName || item.imageFile);
+                    const price = item.productPrice ?? item.salePrice ?? item.price ?? 0;
+                    const image = img(item.productImg || item.imageName || item.imageFile);
+                    const id = item.pId || item.productId;
                     return (
-                      <div key={item.productId} className="flex gap-4 group">
+                      <div key={id} className="flex gap-4 group">
                         <div className="w-20 h-20 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
                            {image ? <img src={image} className="w-full h-full object-cover" /> : <ShoppingBag className="w-8 h-8 text-slate-300 m-auto mt-6" />}
                         </div>
                         <div className="flex-1 flex flex-col min-w-0">
                           <div className="flex justify-between items-start gap-2">
                             <h4 className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug">{item.productTitle || item.title}</h4>
-                            <button onClick={() => handleRemoveItem(item.productId)} className="text-slate-300 hover:text-red-500 transition-colors">
+                            <button onClick={() => handleRemoveItem(id)} className="text-slate-300 hover:text-red-500 transition-colors">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
@@ -351,7 +352,7 @@ const Navbar = () => {
                 <div className="flex justify-between mb-4">
                   <span className="font-bold text-slate-600">Subtotal</span>
                   <span className="font-black text-slate-900 text-xl">
-                    ${cartItems.reduce((acc, i) => acc + (i.salePrice ?? i.price ?? 0) * i.qty, 0).toFixed(2)}
+                    ${cartItems.reduce((acc, i) => acc + (i.productPrice ?? i.salePrice ?? i.price ?? 0) * i.qty, 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex flex-col gap-3">

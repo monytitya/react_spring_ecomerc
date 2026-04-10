@@ -75,8 +75,8 @@ const Wishlist = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {items.map(item => {
-              const image = img(item.imageName || item.imageFile);
-              const price = item.salePrice ?? item.price ?? 0;
+              const image = img(item.productImg || item.imageName || item.imageFile);
+              const price = item.productPrice ?? item.salePrice ?? item.price ?? 0;
               return (
                 <div key={item.productId} className="group bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                   {/* Image */}
@@ -85,7 +85,7 @@ const Wishlist = () => {
                     onClick={() => navigate(`/product/${item.productId}`)}
                   >
                     {image
-                      ? <img src={image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={e=>{e.target.style.display='none';}} />
+                      ? <img src={image} alt={item.productTitle || item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onError={e=>{e.target.style.display='none';}} />
                       : <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="w-14 h-14 text-slate-200" /></div>
                     }
                     {/* Remove */}
@@ -103,7 +103,7 @@ const Wishlist = () => {
                       className="font-bold text-slate-800 text-sm line-clamp-2 mb-1 cursor-pointer hover:text-blue-600 transition-colors"
                       onClick={() => navigate(`/product/${item.productId}`)}
                     >
-                      {item.title}
+                      {item.productTitle || item.title}
                     </h3>
                     <p className="text-base font-black text-slate-900 mb-4">${price}</p>
 

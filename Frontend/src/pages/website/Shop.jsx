@@ -51,29 +51,31 @@ const Shop = () => {
 
     // Search query
     const q = searchParams.get('search')?.toLowerCase() || '';
-    if (q) list = list.filter(p => p.title?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q));
+    if (q) list = list.filter(p => (p.productTitle || p.title)?.toLowerCase().includes(q) || (p.productDesc || p.description)?.toLowerCase().includes(q));
 
     // Category
-    if (activeCategory) list = list.filter(p => String(p.categoryId) === String(activeCategory));
+    if (activeCategory) list = list.filter(p => String(p.catId || p.categoryId) === String(activeCategory));
 
     // Brand
     if (activeBrand) list = list.filter(p => String(p.manufacturerId) === String(activeBrand));
 
     // Price
     list = list.filter(p => {
-      const price = p.salePrice ?? p.price ?? 0;
+      const price = p.productPrice || p.price || p.productPspPrice || p.salePrice || 0;
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
     // Special Labels
     const label = searchParams.get('label');
-    if (label) list = list.filter(p => p.label?.toLowerCase() === label.toLowerCase());
+    if (label) list = list.filter(p => (p.productLabel || p.label)?.toLowerCase() === label.toLowerCase());
 
     // Sort
     list.sort((a, b) => {
-      if (sort === 'salePrice,asc') return (a.salePrice ?? a.price ?? 0) - (b.salePrice ?? b.price ?? 0);
-      if (sort === 'salePrice,desc') return (b.salePrice ?? b.price ?? 0) - (a.salePrice ?? a.price ?? 0);
-      if (sort === 'title,asc') return (a.title || '').localeCompare(b.title || '');
+      const ap = a.productPrice || a.price || a.productPspPrice || a.salePrice || 0;
+      const bp = b.productPrice || b.price || b.productPspPrice || b.salePrice || 0;
+      if (sort === 'salePrice,asc') return ap - bp;
+      if (sort === 'salePrice,desc') return bp - ap;
+      if (sort === 'title,asc') return (a.productTitle || a.title || '').localeCompare(b.productTitle || b.title || '');
       return (b.productId || 0) - (a.productId || 0); // productId desc (newest)
     });
 
@@ -124,15 +126,18 @@ const Shop = () => {
               >
                 All Products
               </button>
-              {categories.map(c => (
+              {categories.map(c => {
+                const id = c.catId || c.categoryId;
+                const title = c.catTitle || c.name;
+                return (
                 <button 
-                  key={c.categoryId}
-                  onClick={() => setActiveCategory(String(c.categoryId))}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeCategory === String(c.categoryId) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-50'}`}
+                  key={id}
+                  onClick={() => setActiveCategory(String(id))}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeCategory === String(id) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
-                  {c.name}
+                  {title}
                 </button>
-              ))}
+              )})}
             </div>
           </div>
 
@@ -214,9 +219,11 @@ const Shop = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
               {filtered.map(product => {
-                const image = img(product.imageName || product.imageFile);
-                const discount = product.price && product.salePrice && product.salePrice < product.price
-                  ? Math.round(((product.price - product.salePrice) / product.price) * 100) : 0;
+                const image = img(product.productImg || product.imageName || product.imageFile);
+                const currentPrice = product.productPrice ?? product.price ?? 0;
+                const oldPrice = product.productPspPrice ?? product.salePrice ?? 0;
+                const discount = oldPrice > 0 && oldPrice > currentPrice
+                  ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
                 const inWishlist = wishlist.includes(product.productId);
 
                 return (
@@ -234,9 +241,9 @@ const Shop = () => {
                       
                       {/* Tags */}
                       <div className="absolute top-3 left-3 flex flex-col gap-2">
-                        {product.label && (
+                        {(product.productLabel || product.label) && (
                            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-full shadow-lg shadow-blue-500/30">
-                             {product.label}
+                             {product.productLabel || product.label}
                            </span>
                         )}
                         {discount > 0 && (
@@ -261,12 +268,12 @@ const Shop = () => {
                         <span className="text-xs font-bold text-slate-400 ml-1">(4.9)</span>
                       </div>
                       <h3 className="font-bold text-slate-800 text-sm line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors">
-                        {product.title}
+                        {product.productTitle || product.title}
                       </h3>
                       <div className="mt-auto pt-4 flex items-end justify-between border-t border-slate-50">
                         <div>
-                          <span className="text-lg font-black text-slate-900">${product.salePrice ?? product.price ?? 0}</span>
-                          {discount > 0 && <span className="text-xs font-bold text-slate-400 line-through ml-2">${product.price}</span>}
+                          <span className="text-lg font-black text-slate-900">${currentPrice}</span>
+                          {discount > 0 && <span className="text-xs font-bold text-slate-400 line-through ml-2">${oldPrice}</span>}
                         </div>
                       </div>
                     </div>
@@ -299,15 +306,18 @@ const Shop = () => {
                   >
                     All
                   </button>
-                  {categories.map(c => (
+                  {categories.map(c => {
+                    const id = c.catId || c.categoryId;
+                    const title = c.catTitle || c.name;
+                    return (
                     <button 
-                      key={c.categoryId}
-                      onClick={() => setActiveCategory(String(c.categoryId))}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === String(c.categoryId) ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
+                      key={id}
+                      onClick={() => setActiveCategory(String(id))}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === String(id) ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
                     >
-                      {c.name}
+                      {title}
                     </button>
-                  ))}
+                  )})}
                 </div>
               </div>
 
