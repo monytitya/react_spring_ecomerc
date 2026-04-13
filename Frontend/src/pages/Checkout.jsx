@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
 import { CheckCircle2, QrCode, AlertCircle, Loader2, ArrowLeft, Building2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { BakongKHQR, khqrData, MerchantInfo } from 'bakong-khqr';
+import { paymentApi } from '../services/api';
 
 const Checkout = () => {
   const { invoiceNo } = useParams();
@@ -9,25 +11,78 @@ const Checkout = () => {
   const [status, setStatus] = useState('PENDING'); // PENDING | PAID
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
+  const [transactionId, setTransactionId] = useState(null);
+  const [amount, setAmount] = useState(150.75); // Default, will be updated from payment creation
 
-  // Use a hardcoded payment ID for simulation (real app would get this from order creation)
-  const paymentId = 1;
-
-  const loadQR = async () => {
+  const initPayment = async () => {
     try {
-      const res = await axios.get(`http://localhost:9090/api/public/payments/qr?invoiceNo=${invoiceNo}&amount=150.75`);
-      setQr(res.data.data);
+      // 1. First, we create/fetch a payment record in the backend
+      const res = await paymentApi.create({
+        orderId: invoiceNo,
+        amount: amount,
+        currency: "USD"
+      });
+      
+      if (res.data?.success) {
+        const pData = res.data.data;
+        setTransactionId(pData.transactionId);
+        setAmount(pData.amount);
+        setStatus(pData.status);
+        
+        // 2. Use the QR string returned from backend OR generate locally
+        if (pData.qrString) {
+          setQr(pData.qrString);
+        } else {
+          generateKHQR(pData.amount);
+        }
+      }
     } catch (e) {
-      console.error("Failed to load QR", e);
+      console.error("Payment init failed", e);
+      // Fallback: generate QR anyway if generic
+      generateKHQR(amount);
     } finally {
       setLoading(false);
     }
   };
 
-  const pollStatus = async () => {
-    if (status === 'PAID') return;
+  const generateKHQR = (payAmount) => {
     try {
-      const res = await axios.get(`http://localhost:9090/api/public/payments/status/${paymentId}`);
+      // Ensure amount is a number and invoiceNo is a string
+      const finalAmount = Number(payAmount);
+      const finalInvoice = String(invoiceNo);
+
+      const merchantInfo = new MerchantInfo(
+        "dev_bakong@abc",      // Merchant Account ID
+        "Blueberry Store",     // Merchant Name
+        "Phnom Penh",          // Merchant City
+        null,                  // Merchant ID (optional if Account ID is provided)
+        "DEVBKKHPXXX",         // Acquiring Bank ID
+        {
+          currency: khqrData.currency.usd,
+          amount: finalAmount,
+          billNumber: finalInvoice,
+          storeLabel: "Blueberry E-com",
+          terminalLabel: "Online",
+          expirationTimestamp: Date.now() + (30 * 60 * 1000)
+        }
+      );
+
+      const khqr = new BakongKHQR();
+      const response = khqr.generateMerchant(merchantInfo);
+      
+      if (response && response.data && response.data.qr) {
+         setQr(response.data.qr);
+         console.log("Generated KHQR locally:", response.data.qr);
+      }
+    } catch (e) {
+      console.error("KHQR generation failed", e);
+    }
+  };
+
+  const pollStatus = async () => {
+    if (!transactionId || status === 'PAID') return;
+    try {
+      const res = await paymentApi.getStatus(transactionId);
       if (res.data.data?.status === 'PAID') {
         setStatus('PAID');
       }
@@ -39,8 +94,12 @@ const Checkout = () => {
   const simulateSuccess = async () => {
     setSimulating(true);
     try {
-      await axios.post(`http://localhost:9090/api/public/payments/simulate/${paymentId}`);
-      setStatus('PAID');
+      // Real flow: simulate a webhook callback from the bank to our server
+      await paymentApi.webhook({ 
+        transactionId: transactionId,
+        amount: amount
+      });
+      // The poller will pick up the status change automatically
     } catch (e) {
       alert("Simulation failed");
     } finally {
@@ -49,10 +108,16 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    loadQR();
-    const timer = setInterval(pollStatus, 3000);
+    initPayment();
+  }, [invoiceNo]);
+
+  useEffect(() => {
+    let timer;
+    if (transactionId && status !== 'PAID') {
+      timer = setInterval(pollStatus, 3000);
+    }
     return () => clearInterval(timer);
-  }, []);
+  }, [transactionId, status]);
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand" /></div>;
 
@@ -84,8 +149,12 @@ const Checkout = () => {
                 <h2 className="text-3xl font-black text-slate-900 mt-1">$150.75</h2>
               </div>
 
-              <div className="relative p-4 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
-                {qr && <img src={qr} alt="Payment QR" className="w-64 h-64 mix-blend-multiply" />}
+              <div className="relative p-6 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
+                {qr && (
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <QRCodeSVG value={qr} size={220} level="M" includeMargin={false} />
+                  </div>
+                )}
                 <div className="absolute inset-0 border-4 border-brand/5 rounded-3xl pointer-events-none"></div>
               </div>
 

@@ -54,7 +54,15 @@ const ProductDetail = () => {
   const handleAddToCart = async () => {
     if (!isLoggedIn) { navigate('/login'); return; }
     try {
-      await cartApi.add({ productId: product.productId, qty, size });
+      await cartApi.add({
+        pid: product.productId,
+        pId: product.productId,
+        PId: product.productId,
+        p_id: product.productId,
+        productId: product.productId,
+        qty,
+        size
+      });
       setAdded(true);
       setTimeout(() => setAdded(false), 2500);
     } catch { navigate('/login'); }
@@ -76,7 +84,7 @@ const ProductDetail = () => {
   const image   = img(product.productImg || product.imageName || product.imageFile);
   const currentPrice = product.productPrice ?? product.price ?? 0;
   const oldPriceVal = product.productPspPrice ?? product.salePrice ?? 0;
-  const oldPrice = oldPriceVal > 0 && oldPriceVal > currentPrice ? oldPriceVal : null;
+  const oldPrice = oldPriceVal > currentPrice ? oldPriceVal : null;
   const price = currentPrice;
   const discount = oldPrice ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
   const title = product.productTitle || product.title;
@@ -165,11 +173,14 @@ const ProductDetail = () => {
 
             {/* Price */}
             <div className="flex items-baseline gap-4 mb-8 pb-8 border-b border-slate-100">
-              <span className="text-4xl font-black text-slate-900">${price}</span>
+              <div className="flex flex-col">
+                <span className="text-4xl font-black text-slate-900">${(price * qty).toLocaleString()}</span>
+                {qty > 1 && <span className="text-sm font-bold text-slate-400 mt-1">${price.toLocaleString()} each</span>}
+              </div>
               {oldPrice && (
                 <>
-                  <span className="text-xl text-slate-400 line-through">${oldPrice}</span>
-                  <span className="bg-red-100 text-red-600 text-sm font-bold px-3 py-1 rounded-full">Save {discount}%</span>
+                  <span className="text-xl text-slate-400 line-through">${(oldPrice * qty).toLocaleString()}</span>
+                  <span className="bg-red-100 text-red-600 text-sm font-bold px-3 py-1 rounded-full self-start mt-2">Save {discount}%</span>
                 </>
               )}
             </div>

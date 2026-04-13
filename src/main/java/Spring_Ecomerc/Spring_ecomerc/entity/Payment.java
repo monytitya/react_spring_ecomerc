@@ -2,6 +2,7 @@ package Spring_Ecomerc.Spring_ecomerc.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
@@ -13,27 +14,24 @@ public class Payment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "payment_id")
-    private Integer paymentId;
+    private Integer id;
 
-    @Column(name = "invoice_no")
-    private Long invoiceNo;
+    @Column(name = "order_id")
+    private Long orderId;
+
+    @Column(name = "transaction_id", unique = true)
+    private String transactionId;
 
     @Column(name = "amount")
     private Double amount;
 
-    @Column(name = "payment_mode", columnDefinition = "TEXT")
-    private String paymentMode;
+    @Column(name = "currency")
+    private String currency; // "USD" or "KHR"
 
-    @Column(name = "ref_no", columnDefinition = "TEXT")
-    private String refNo;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private PaymentStatus status = PaymentStatus.PENDING;
 
-    @Column(name = "code")
-    private Integer code;
-
-    @Column(name = "payment_date", columnDefinition = "TEXT")
-    private String paymentDate;
-
-    @Column(name = "status", columnDefinition = "TEXT")
-    private String status = "PENDING";
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 }

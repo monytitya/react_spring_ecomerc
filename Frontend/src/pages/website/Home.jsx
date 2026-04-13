@@ -11,9 +11,9 @@ const ProductCard = ({ product }) => {
   const navigate = useNavigate();
   const image = img(product.productImg || product.imageName || product.imageFile);
   const currentPrice = product.productPrice ?? product.price ?? 0;
-  const oldPrice = product.productPspPrice ?? product.salePrice ?? 0;
-  const discount = oldPrice > 0 && oldPrice > currentPrice
-    ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
+  const oldPriceVal = product.productPspPrice ?? product.salePrice ?? 0;
+  const oldPrice = oldPriceVal > currentPrice ? oldPriceVal : null;
+  const discount = oldPrice ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
 
   return (
     <div

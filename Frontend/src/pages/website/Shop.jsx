@@ -54,14 +54,24 @@ const Shop = () => {
     if (q) list = list.filter(p => (p.productTitle || p.title)?.toLowerCase().includes(q) || (p.productDesc || p.description)?.toLowerCase().includes(q));
 
     // Category
-    if (activeCategory) list = list.filter(p => String(p.catId || p.categoryId) === String(activeCategory));
+    if (activeCategory) {
+      list = list.filter(p => {
+        const id1 = String(p.catId || p.categoryId);
+        const id2 = String(p.pCatId);
+        const t1 = (p.catTitle || p.categoryName || '').toLowerCase();
+        const t2 = (p.pCatTitle || '').toLowerCase();
+        const active = String(activeCategory).toLowerCase();
+        
+        return id1 === active || id2 === active || t1 === active || (t2 && t2 === active);
+      });
+    }
 
     // Brand
     if (activeBrand) list = list.filter(p => String(p.manufacturerId) === String(activeBrand));
 
     // Price
     list = list.filter(p => {
-      const price = p.productPrice || p.price || p.productPspPrice || p.salePrice || 0;
+      const price = p.productPrice || p.price || 0;
       return price >= priceRange[0] && price <= priceRange[1];
     });
 
@@ -71,8 +81,9 @@ const Shop = () => {
 
     // Sort
     list.sort((a, b) => {
-      const ap = a.productPrice || a.price || a.productPspPrice || a.salePrice || 0;
-      const bp = b.productPrice || b.price || b.productPspPrice || b.salePrice || 0;
+      const ap = a.productPrice || a.price || 0;
+      const bp = b.productPrice || b.price || 0;
+      
       if (sort === 'salePrice,asc') return ap - bp;
       if (sort === 'salePrice,desc') return bp - ap;
       if (sort === 'title,asc') return (a.productTitle || a.title || '').localeCompare(b.productTitle || b.title || '');
@@ -126,14 +137,18 @@ const Shop = () => {
               >
                 All Products
               </button>
-              {categories.map(c => {
+              {categories.reduce((acc, c) => {
+                 const title = c.catTitle || c.name;
+                 if (!acc.some(x => (x.catTitle || x.name) === title)) acc.push(c);
+                 return acc;
+              }, []).map(c => {
                 const id = c.catId || c.categoryId;
                 const title = c.catTitle || c.name;
                 return (
                 <button 
                   key={id}
-                  onClick={() => setActiveCategory(String(id))}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${activeCategory === String(id) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-50'}`}
+                  onClick={() => setActiveCategory(title)}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${[title, String(id)].includes(activeCategory) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'text-slate-600 hover:bg-slate-50'}`}
                 >
                   {title}
                 </button>
@@ -221,9 +236,9 @@ const Shop = () => {
               {filtered.map(product => {
                 const image = img(product.productImg || product.imageName || product.imageFile);
                 const currentPrice = product.productPrice ?? product.price ?? 0;
-                const oldPrice = product.productPspPrice ?? product.salePrice ?? 0;
-                const discount = oldPrice > 0 && oldPrice > currentPrice
-                  ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
+                const oldPriceVal = product.productPspPrice ?? product.salePrice ?? 0;
+                const oldPrice = oldPriceVal > currentPrice ? oldPriceVal : null;
+                const discount = oldPrice ? Math.round(((oldPrice - currentPrice) / oldPrice) * 100) : 0;
                 const inWishlist = wishlist.includes(product.productId);
 
                 return (
@@ -306,14 +321,18 @@ const Shop = () => {
                   >
                     All
                   </button>
-                  {categories.map(c => {
+                  {categories.reduce((acc, c) => {
+                     const title = c.catTitle || c.name;
+                     if (!acc.some(x => (x.catTitle || x.name) === title)) acc.push(c);
+                     return acc;
+                  }, []).map(c => {
                     const id = c.catId || c.categoryId;
                     const title = c.catTitle || c.name;
                     return (
                     <button 
                       key={id}
-                      onClick={() => setActiveCategory(String(id))}
-                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeCategory === String(id) ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
+                      onClick={() => setActiveCategory(title)}
+                      className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${[title, String(id)].includes(activeCategory) ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-600 border border-slate-200'}`}
                     >
                       {title}
                     </button>

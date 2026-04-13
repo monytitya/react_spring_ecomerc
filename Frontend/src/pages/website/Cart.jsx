@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, Minus, Plus, X, Tag, ArrowRight, Loader2, ShoppingCart, Truck } from 'lucide-react';
-import { cartApi, couponApi, fileUrl } from '../../services/api';
+import { cartApi, couponApi, orderApi, fileUrl } from '../../services/api';
 
 const BASE = 'http://localhost:9090/api/files/';
 const img  = (f) => (f ? `${BASE}${f}` : null);
@@ -14,6 +14,7 @@ const Cart = () => {
   const [couponError, setCouponError] = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
   const [updating, setUpdating] = useState(null);
+  const [placingOrder, setPlacingOrder] = useState(false);
   const navigate = useNavigate();
   const isLoggedIn = !!(localStorage.getItem('admin_token') || localStorage.getItem('customer_token'));
 
@@ -36,6 +37,43 @@ const Cart = () => {
   const handleRemove = async (productId) => {
     await cartApi.remove(productId).catch(() => {});
     setItems(prev => prev.filter(i => (i.pId || i.productId) !== productId));
+  };
+
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+    setPlacingOrder(true);
+    try {
+      // Get the customer ID if logged in (usually stored in localstorage or decoded from token)
+      // For now, we'll try to find it from localStorage if it exists
+      const customerStr = localStorage.getItem('customer');
+      const customer = customerStr ? JSON.parse(customerStr) : null;
+      
+      // PlaceOrderRequest requires: customerId, dueAmount, qty, size, productId
+      // We'll use the first item to simplify for this flow, or the backend could handle multiple (usually)
+      // Standard flow: placeOrder creates a CustomerOrder and PendingOrder and returns it with invoiceNo
+      const firstItem = items[0];
+      const payload = {
+        customerId: customer?.customerId || null,
+        dueAmount: total,
+        qty: firstItem.qty || 1,
+        size: firstItem.size || 'M',
+        productId: firstItem.pId || firstItem.productId
+      };
+      
+      const res = await orderApi.placeOrder(payload);
+      if (res.data?.success) {
+        const invoiceNo = res.data.data.invoiceNo;
+        navigate(`/checkout/${invoiceNo}`);
+      } else {
+        alert("Failed to place order: " + (res.data?.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      // Fallback if API fails
+      navigate('/checkout/new');
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   const handleCoupon = async () => {
@@ -252,10 +290,11 @@ const Cart = () => {
 
                 {/* Checkout */}
                 <button
-                  onClick={() => navigate('/checkout/new')}
-                  className="mt-6 w-full flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg shadow-blue-500/25 transition-all hover:-translate-y-0.5 hover:shadow-blue-500/40"
+                  onClick={handleCheckout}
+                  disabled={placingOrder}
+                  className="mt-6 w-full flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg shadow-blue-500/25 transition-all hover:-translate-y-0.5 hover:shadow-blue-500/40 disabled:opacity-50"
                 >
-                  Proceed to Checkout <ArrowRight className="w-5 h-5" />
+                  {placingOrder ? 'Processing...' : 'Proceed to Checkout'} <ArrowRight className="w-5 h-5" />
                 </button>
 
                 {/* Payment icons */}

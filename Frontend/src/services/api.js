@@ -151,6 +151,12 @@ export const cmsApi = {
   getEnquiryTypes: () => api.get('/cms/enquiry-types'),
 };
 
+export const paymentApi = {
+  create: (data) => api.post('/payment/create', data),
+  getStatus: (transactionId) => api.get(`/payment/status/${transactionId}`),
+  webhook: (data) => api.post('/payment/webhook', data),
+};
+
 export const adminApi = {
   getProfile: (id) => api.get(`/admin/profile/${id}`),
   uploadProfileImage: (id, formData) =>

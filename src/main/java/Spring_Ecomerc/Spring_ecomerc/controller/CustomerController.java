@@ -115,7 +115,7 @@ public class CustomerController {
     // Payments
     @GetMapping("/payments/{invoiceNo}")
     public ResponseEntity<ApiResponse<List<Payment>>> getPaymentsByInvoice(@PathVariable Long invoiceNo) {
-        return ResponseEntity.ok(ApiResponse.success(paymentRepository.findByInvoiceNo(invoiceNo)));
+        return ResponseEntity.ok(ApiResponse.success(paymentRepository.findByOrderId(invoiceNo).stream().toList()));
     }
 
     @PostMapping("/payments")
