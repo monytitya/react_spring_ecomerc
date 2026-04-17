@@ -10,4 +10,5 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, In
     List<CustomerOrder> findByCustomerId(Integer customerId);
     long countByOrderStatus(String orderStatus);
     List<CustomerOrder> findByOrderStatus(String status);
+    java.util.Optional<CustomerOrder> findByInvoiceNo(Long invoiceNo);
 }

@@ -59,6 +59,12 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    public OrderModel getOrderByInvoiceNo(Long invoiceNo) {
+        return customerOrderRepository.findByInvoiceNo(invoiceNo)
+                .map(this::mapToModel)
+                .orElseThrow(() -> new RuntimeException("Order not found with invoice no: " + invoiceNo));
+    }
+
     public List<OrderModel> getAllOrders() {
         return customerOrderRepository.findAll().stream().map(this::mapToModel).collect(Collectors.toList());
     }

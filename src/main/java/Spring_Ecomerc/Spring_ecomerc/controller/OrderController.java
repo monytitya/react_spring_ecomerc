@@ -33,6 +33,11 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrdersByCustomer(customerId)));
     }
 
+    @GetMapping("/invoice/{invoiceNo}")
+    public ResponseEntity<ApiResponse<OrderModel>> getByInvoiceNo(@PathVariable Long invoiceNo) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOrderByInvoiceNo(invoiceNo)));
+    }
+
     @GetMapping("/admin/all")
     public ResponseEntity<ApiResponse<List<OrderModel>>> allOrders() {
         return ResponseEntity.ok(ApiResponse.success(orderService.getAllOrders()));

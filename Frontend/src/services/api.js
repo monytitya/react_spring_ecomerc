@@ -50,6 +50,7 @@ export const orderApi = {
   updateStatus: (id, status) => api.put(`/orders/admin/${id}/status`, { status }),
   getCustomerOrders: (customerId) => api.get(`/orders/my/${customerId}`),
   placeOrder: (orderData) => api.post('/orders', orderData),
+  getByInvoice: (invoiceNo) => api.get(`/orders/invoice/${invoiceNo}`),
 };
 
 

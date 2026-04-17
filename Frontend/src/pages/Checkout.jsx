@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { CheckCircle2, QrCode, AlertCircle, Loader2, ArrowLeft, Building2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { BakongKHQR, khqrData, MerchantInfo } from 'bakong-khqr';
-import { paymentApi } from '../services/api';
+import { paymentApi, orderApi } from '../services/api';
 
 const Checkout = () => {
   const { invoiceNo } = useParams();
@@ -12,50 +12,53 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
-  const [amount, setAmount] = useState(150.75); // Default, will be updated from payment creation
+  const [amount, setAmount] = useState(0); 
+  const [orderData, setOrderData] = useState(null);
 
   const initPayment = async () => {
     try {
-      // 1. First, we create/fetch a payment record in the backend
+      setLoading(true);
+      // 1. Fetch real order details using invoiceNo
+      const orderRes = await orderApi.getByInvoice(invoiceNo);
+      if (!orderRes.data?.success) throw new Error("Order not found");
+      
+      const order = orderRes.data.data;
+      setOrderData(order);
+      const actualAmount = order.dueAmount || 0;
+      setAmount(actualAmount);
+
+      // 2. Create/fetch a payment record in the backend with the real amount
       const res = await paymentApi.create({
         orderId: invoiceNo,
-        amount: amount,
+        amount: actualAmount,
         currency: "USD"
       });
       
       if (res.data?.success) {
         const pData = res.data.data;
         setTransactionId(pData.transactionId);
-        setAmount(pData.amount);
         setStatus(pData.status);
         
-        // 2. Use the QR string returned from backend OR generate locally
-        if (pData.qrString) {
-          setQr(pData.qrString);
-        } else {
-          generateKHQR(pData.amount);
-        }
+        // 3. Generate QR locally with scannable parameters
+        generateKHQR(actualAmount, invoiceNo);
       }
     } catch (e) {
-      console.error("Payment init failed", e);
-      // Fallback: generate QR anyway if generic
-      generateKHQR(amount);
+      console.error("Checkout init failed", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateKHQR = (payAmount) => {
+  const generateKHQR = (payAmount, billNo) => {
     try {
-      // Ensure amount is a number and invoiceNo is a string
       const finalAmount = Number(payAmount);
-      const finalInvoice = String(invoiceNo);
+      const finalInvoice = String(billNo);
 
       const merchantInfo = new MerchantInfo(
         "dev_bakong@abc",      // Merchant Account ID
         "Blueberry Store",     // Merchant Name
         "Phnom Penh",          // Merchant City
-        null,                  // Merchant ID (optional if Account ID is provided)
+        null,                  // Merchant ID
         "DEVBKKHPXXX",         // Acquiring Bank ID
         {
           currency: khqrData.currency.usd,
@@ -72,7 +75,7 @@ const Checkout = () => {
       
       if (response && response.data && response.data.qr) {
          setQr(response.data.qr);
-         console.log("Generated KHQR locally:", response.data.qr);
+         console.log("Generated KHQR:", response.data.qr);
       }
     } catch (e) {
       console.error("KHQR generation failed", e);
@@ -94,12 +97,10 @@ const Checkout = () => {
   const simulateSuccess = async () => {
     setSimulating(true);
     try {
-      // Real flow: simulate a webhook callback from the bank to our server
       await paymentApi.webhook({ 
         transactionId: transactionId,
         amount: amount
       });
-      // The poller will pick up the status change automatically
     } catch (e) {
       alert("Simulation failed");
     } finally {
@@ -108,7 +109,9 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    initPayment();
+    if (invoiceNo) {
+      initPayment();
+    }
   }, [invoiceNo]);
 
   useEffect(() => {
@@ -146,7 +149,9 @@ const Checkout = () => {
             <>
               <div className="text-center mb-6">
                 <p className="text-slate-500 font-medium">Total Amount</p>
-                <h2 className="text-3xl font-black text-slate-900 mt-1">$150.75</h2>
+                <h2 className="text-3xl font-black text-slate-900 mt-1">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)}
+                </h2>
               </div>
 
               <div className="relative p-6 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
