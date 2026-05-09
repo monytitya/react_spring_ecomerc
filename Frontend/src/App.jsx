@@ -30,8 +30,14 @@ import Contact        from './pages/website/Contact';
 
 /* Smart root redirect */
 const RootRedirect = () => {
+  const port = window.location.port;
   const token = localStorage.getItem('admin_token') || localStorage.getItem('customer_token');
-  return <Navigate to={token ? '/dashboard' : '/home'} replace />;
+  
+  if (port === '5174') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <Navigate to="/home" replace />;
 };
 
 function App() {

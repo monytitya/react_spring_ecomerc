@@ -22,6 +22,9 @@ public class Payment {
     @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
+    @Column(name = "md5")
+    private String md5;
+
     @Column(name = "amount")
     private Double amount;
 

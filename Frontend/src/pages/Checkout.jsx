@@ -8,12 +8,14 @@ import { paymentApi, orderApi } from '../services/api';
 const Checkout = () => {
   const { invoiceNo } = useParams();
   const [qr, setQr] = useState(null);
+  const [qrImage, setQrImage] = useState(null);
   const [status, setStatus] = useState('PENDING'); // PENDING | PAID
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
   const [amount, setAmount] = useState(0); 
   const [orderData, setOrderData] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const initPayment = async () => {
     try {
@@ -27,9 +29,9 @@ const Checkout = () => {
       const actualAmount = order.dueAmount || 0;
       setAmount(actualAmount);
 
-      // 2. Create/fetch a payment record in the backend with the real amount
+      // 2. Create/fetch a payment record in the backend
       const res = await paymentApi.create({
-        orderId: invoiceNo,
+        orderId: order.orderId, // Use real order ID
         amount: actualAmount,
         currency: "USD"
       });
@@ -38,47 +40,16 @@ const Checkout = () => {
         const pData = res.data.data;
         setTransactionId(pData.transactionId);
         setStatus(pData.status);
-        
-        // 3. Generate QR locally with scannable parameters
-        generateKHQR(actualAmount, invoiceNo);
+        setQr(pData.qrString);
+        setQrImage(pData.qrImage); // Base64 from ZXing
+      } else {
+        setErrorMsg(res.data?.message || "Failed to initialize payment.");
       }
     } catch (e) {
       console.error("Checkout init failed", e);
+      setErrorMsg(e.response?.data?.message || e.message || "Checkout initialization failed");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const generateKHQR = (payAmount, billNo) => {
-    try {
-      const finalAmount = Number(payAmount);
-      const finalInvoice = String(billNo);
-
-      const merchantInfo = new MerchantInfo(
-        "dev_bakong@abc",      // Merchant Account ID
-        "Blueberry Store",     // Merchant Name
-        "Phnom Penh",          // Merchant City
-        null,                  // Merchant ID
-        "DEVBKKHPXXX",         // Acquiring Bank ID
-        {
-          currency: khqrData.currency.usd,
-          amount: finalAmount,
-          billNumber: finalInvoice,
-          storeLabel: "Blueberry E-com",
-          terminalLabel: "Online",
-          expirationTimestamp: Date.now() + (30 * 60 * 1000)
-        }
-      );
-
-      const khqr = new BakongKHQR();
-      const response = khqr.generateMerchant(merchantInfo);
-      
-      if (response && response.data && response.data.qr) {
-         setQr(response.data.qr);
-         console.log("Generated KHQR:", response.data.qr);
-      }
-    } catch (e) {
-      console.error("KHQR generation failed", e);
     }
   };
 
@@ -95,14 +66,17 @@ const Checkout = () => {
   };
 
   const simulateSuccess = async () => {
+    if (!transactionId) {
+        alert("Transaction ID is missing. Cannot simulate.");
+        return;
+    }
     setSimulating(true);
     try {
-      await paymentApi.webhook({ 
-        transactionId: transactionId,
-        amount: amount
-      });
+      await paymentApi.simulatePaid(transactionId);
+      setStatus('PAID');
     } catch (e) {
-      alert("Simulation failed");
+      console.error(e);
+      alert("Simulation failed: " + (e.response?.data?.message || e.message));
     } finally {
       setSimulating(false);
     }
@@ -117,7 +91,7 @@ const Checkout = () => {
   useEffect(() => {
     let timer;
     if (transactionId && status !== 'PAID') {
-      timer = setInterval(pollStatus, 3000);
+      timer = setInterval(pollStatus, 5000); // Polling every 5 seconds
     }
     return () => clearInterval(timer);
   }, [transactionId, status]);
@@ -145,6 +119,13 @@ const Checkout = () => {
               <p className="text-slate-500 mt-2">Check your Telegram bot for notification.</p>
               <button onClick={() => window.location.reload()} className="mt-8 w-full py-4 bg-brand text-white font-black rounded-2xl shadow-lg hover:scale-[1.02] transition-all">Back to Store</button>
             </div>
+          ) : errorMsg ? (
+            <div className="text-center animate-in zoom-in duration-500 w-full">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-black text-slate-900">Payment Error</h2>
+              <p className="text-red-500 text-sm mt-2 p-4 bg-red-50 rounded-xl border border-red-100">{errorMsg}</p>
+              <button onClick={() => window.location.reload()} className="mt-6 w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-all">Try Again</button>
+            </div>
           ) : (
             <>
               <div className="text-center mb-6">
@@ -155,7 +136,11 @@ const Checkout = () => {
               </div>
 
               <div className="relative p-6 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
-                {qr && (
+                {qrImage ? (
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <img src={`data:image/png;base64,${qrImage}`} alt="KHQR Code" className="w-[220px] h-[220px]" />
+                  </div>
+                ) : qr && (
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                     <QRCodeSVG value={qr} size={220} level="M" includeMargin={false} />
                   </div>
@@ -176,8 +161,8 @@ const Checkout = () => {
 
                 <button 
                   onClick={simulateSuccess}
-                  disabled={simulating}
-                  className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center"
+                  disabled={simulating || !transactionId}
+                  className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center disabled:opacity-50"
                 >
                   {simulating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                   [SIMULATE] Customer Scan & Pay
