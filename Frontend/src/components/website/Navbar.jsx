@@ -63,12 +63,13 @@ const Navbar = () => {
     setCartSidebarOpen(true);
     loadCart();
   };
-
+  const handleRemoveItem = async (productId) => {
     const itemToRemove = cartItems.find(i => i.productId === productId || i.pId === productId);
     const qtyToRemove = itemToRemove ? (itemToRemove.qty || 0) : 0;
     await cartApi.remove(productId).catch(() => {});
     setCartItems(prev => prev.filter(i => i.productId !== productId && i.pId !== productId));
     setCartCount(prev => Math.max(0, prev - qtyToRemove));
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -321,7 +322,8 @@ const Navbar = () => {
               ) : (
                 <div className="space-y-6">
                   {cartItems.map((item) => {
-                    const price = item.productPrice ?? item.salePrice ?? item.price ?? 0;
+                    const price = item.productPrice ?? 0;
+                    const itemSubtotal = item.subtotal ?? (price * (item.qty ?? 1));
                     const image = img(item.productImg || item.imageName || item.imageFile);
                     const id = item.pId || item.productId;
                     return (
@@ -338,7 +340,7 @@ const Navbar = () => {
                           </div>
                           <div className="mt-auto flex items-end justify-between">
                             <p className="text-sm font-semibold text-slate-500">Qty: {item.qty}</p>
-                            <p className="font-black text-blue-600 text-sm">${(price * item.qty).toFixed(2)}</p>
+                            <p className="font-black text-blue-600 text-sm">${itemSubtotal.toFixed(2)}</p>
                           </div>
                         </div>
                       </div>
@@ -354,14 +356,14 @@ const Navbar = () => {
                 <div className="flex justify-between mb-4">
                   <span className="font-bold text-slate-600">Subtotal</span>
                   <span className="font-black text-slate-900 text-xl">
-                    ${cartItems.reduce((acc, i) => acc + (i.productPrice ?? i.salePrice ?? i.price ?? 0) * i.qty, 0).toFixed(2)}
+                    ${cartItems.reduce((acc, i) => acc + (i.subtotal ?? ((i.productPrice ?? 0) * (i.qty ?? 1))), 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex flex-col gap-3">
                   <button onClick={() => { setCartSidebarOpen(false); navigate('/cart'); }} className="w-full py-4 bg-white text-blue-600 font-bold border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors">
                     View Full Cart
                   </button>
-                  <button onClick={() => { setCartSidebarOpen(false); navigate('/checkout/new'); }} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                  <button onClick={() => { setCartSidebarOpen(false); navigate('/cart'); }} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
                     Checkout <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>

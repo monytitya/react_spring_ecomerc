@@ -29,14 +29,14 @@ public class CartController {
         return ResponseEntity.ok(ApiResponse.success("Added to cart", cartService.addToCart(cart)));
     }
 
-    @PutMapping("/{pId}")
-    public ResponseEntity<ApiResponse<CartModel>> updateQty(@PathVariable Integer pId, @RequestParam Integer qty) {
-        return ResponseEntity.ok(ApiResponse.success("Cart updated", cartService.updateQuantity(pId, qty)));
+    @PutMapping("/{productId}")
+    public ResponseEntity<ApiResponse<CartModel>> updateQty(@PathVariable Integer productId, @RequestParam Integer qty, HttpServletRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("Cart updated", cartService.updateQuantity(productId, qty, request.getRemoteAddr())));
     }
 
-    @DeleteMapping("/{pId}")
-    public ResponseEntity<ApiResponse<Void>> removeItem(@PathVariable Integer pId) {
-        cartService.removeFromCart(pId);
+    @DeleteMapping("/{productId}")
+    public ResponseEntity<ApiResponse<Void>> removeItem(@PathVariable Integer productId, HttpServletRequest request) {
+        cartService.removeFromCart(productId, request.getRemoteAddr());
         return ResponseEntity.ok(ApiResponse.success("Removed from cart", null));
     }
 

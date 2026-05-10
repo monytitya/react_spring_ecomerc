@@ -31,10 +31,12 @@ public class Payment {
     @Column(name = "currency")
     private String currency; // "USD" or "KHR"
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Builder.Default
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

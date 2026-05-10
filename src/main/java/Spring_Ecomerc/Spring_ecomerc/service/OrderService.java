@@ -23,6 +23,7 @@ public class OrderService {
     private final CartRepository cartRepository;
     private final CustomerRepository customerRepository;
     private final ProductRepository productRepository;
+    private final TelegramService telegramService;
 
     @Transactional
     public OrderModel placeOrder(PlaceOrderRequest request, String ipAddress) {
@@ -50,6 +51,25 @@ public class OrderService {
         pendingOrderRepository.save(pendingOrder);
 
         cartRepository.deleteByIpAdd(ipAddress);
+
+        // New Idea: Instant Telegram Alert
+        try {
+            String customerName = customerRepository.findById(request.getCustomerId())
+                    .map(c -> c.getCustomerName()).orElse("Guest");
+            String productTitle = productRepository.findById(request.getProductId())
+                    .map(p -> p.getProductTitle()).orElse("Product #" + request.getProductId());
+
+            String msg = "<b>📦 New Order Received!</b>\n\n" +
+                         "<b>Invoice:</b> #" + invoiceNo + "\n" +
+                         "<b>Customer:</b> " + customerName + "\n" +
+                         "<b>Product:</b> " + productTitle + "\n" +
+                         "<b>Quantity:</b> " + request.getQty() + "\n" +
+                         "<b>Total:</b> $" + String.format("%.2f", request.getDueAmount()) + "\n\n" +
+                         "<i>Please check the admin dashboard to process.</i>";
+            telegramService.sendMessage(msg);
+        } catch (Exception e) {
+            // Don't fail the order if telegram fails
+        }
 
         return mapToModel(order);
     }

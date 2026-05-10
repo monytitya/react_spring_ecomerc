@@ -23,11 +23,16 @@ public class CartService {
     }
 
     public CartModel addToCart(Cart cart) {
-        return mapToModel(cartRepository.save(cart));
+        return cartRepository.findByProductIdAndIpAdd(cart.getProductId(), cart.getIpAdd())
+                .map(existing -> {
+                    existing.setQty(existing.getQty() + cart.getQty());
+                    return mapToModel(cartRepository.save(existing));
+                })
+                .orElseGet(() -> mapToModel(cartRepository.save(cart)));
     }
 
-    public CartModel updateQuantity(Integer pId, Integer qty) {
-        Cart cart = cartRepository.findById(pId)
+    public CartModel updateQuantity(Integer productId, Integer qty, String ipAddress) {
+        Cart cart = cartRepository.findByProductIdAndIpAdd(productId, ipAddress)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
         cart.setQty(qty);
         return mapToModel(cartRepository.save(cart));
@@ -35,24 +40,27 @@ public class CartService {
 
     private CartModel mapToModel(Cart cart) {
         CartModel model = new CartModel();
-        model.setPId(cart.getPId());
+        model.setPId(cart.getProductId());
         model.setQty(cart.getQty());
         model.setSize(cart.getSize());
         model.setIpAdd(cart.getIpAdd());
-        
-        productRepository.findById(cart.getPId()).ifPresent(p -> {
+
+        productRepository.findById(cart.getProductId()).ifPresent(p -> {
             model.setProductTitle(p.getProductTitle());
             model.setProductImg(p.getProductImg());
-            model.setProductPrice(p.getProductPrice());
-            model.setSubtotal(p.getProductPrice() * cart.getQty());
+            Integer price = (p.getProductPrice() != null && p.getProductPrice() > 0)
+                    ? p.getProductPrice()
+                    : (p.getProductPspPrice() != null ? p.getProductPspPrice() : 0);
+            model.setProductPrice(price);
+            model.setSubtotal(price * (cart.getQty() != null ? cart.getQty() : 1));
         });
-        
+
         return model;
     }
 
     @Transactional
-    public void removeFromCart(Integer pId) {
-        cartRepository.deleteById(pId);
+    public void removeFromCart(Integer productId, String ipAddress) {
+        cartRepository.deleteByProductIdAndIp(productId, ipAddress);
     }
 
     @Transactional
@@ -60,4 +68,3 @@ public class CartService {
         cartRepository.deleteByIpAdd(ipAddress);
     }
 }
-
