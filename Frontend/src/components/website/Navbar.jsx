@@ -35,7 +35,8 @@ const Navbar = () => {
     if (isLoggedIn) {
       cartApi.get().then(r => {
         setCartItems(r.data?.data || []);
-        setCartCount(r.data?.data?.length || 0);
+        const totalQty = (r.data?.data || []).reduce((sum, item) => sum + (item.qty || 0), 0);
+        setCartCount(totalQty);
       }).catch(() => {});
       if (user?.id) {
         wishlistApi.get(user.id).then(r => setWishlistCount(r.data?.data?.length || 0)).catch(() => {});
@@ -48,7 +49,8 @@ const Navbar = () => {
     setCartLoading(true);
     cartApi.get().then(r => {
       setCartItems(r.data?.data || []);
-      setCartCount(r.data?.data?.length || 0);
+      const totalQty = (r.data?.data || []).reduce((sum, item) => sum + (item.qty || 0), 0);
+      setCartCount(totalQty);
     }).finally(() => setCartLoading(false));
   };
 
@@ -62,11 +64,11 @@ const Navbar = () => {
     loadCart();
   };
 
-  const handleRemoveItem = async (productId) => {
+    const itemToRemove = cartItems.find(i => i.productId === productId || i.pId === productId);
+    const qtyToRemove = itemToRemove ? (itemToRemove.qty || 0) : 0;
     await cartApi.remove(productId).catch(() => {});
-    setCartItems(prev => prev.filter(i => i.productId !== productId));
-    setCartCount(prev => prev - 1);
-  };
+    setCartItems(prev => prev.filter(i => i.productId !== productId && i.pId !== productId));
+    setCartCount(prev => Math.max(0, prev - qtyToRemove));
 
   const handleLogout = () => {
     localStorage.clear();
