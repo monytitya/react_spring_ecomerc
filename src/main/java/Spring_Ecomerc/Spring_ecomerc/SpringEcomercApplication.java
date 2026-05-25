@@ -22,7 +22,7 @@ public class SpringEcomercApplication {
 	@Bean
 	CommandLineRunner init(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
 		return args -> {
-			String testEmail = "admin@gmail.com";
+			String testEmail = "tityamonymac@gmail.com";
 			Admin admin = adminRepository.findByAdminEmail(testEmail).orElse(new Admin());
 
 			admin.setAdminName("Admin User");

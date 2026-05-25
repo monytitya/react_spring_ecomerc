@@ -168,6 +168,10 @@ export const adminApi = {
   resetData: () => api.delete('/admin/reset-data'),
 };
 
+export const contactApi = {
+  send: (data) => api.post('/contact/send', data),
+};
+
 export const fileUrl = (filename) => `http://localhost:9090/api/files/${filename}`;
 
 export default api;

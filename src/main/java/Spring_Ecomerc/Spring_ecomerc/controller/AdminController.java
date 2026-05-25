@@ -42,13 +42,12 @@ public class AdminController {
     @DeleteMapping("/reset-data")
     @Transactional
     public ResponseEntity<ApiResponse<String>> resetData() {
-        // Clear all transactional and customer-related data
         pendingOrderRepository.deleteAllInBatch();
         customerOrderRepository.deleteAllInBatch();
         cartRepository.deleteAllInBatch();
         wishlistRepository.deleteAllInBatch();
         customerRepository.deleteAllInBatch();
-        
+
         return ResponseEntity.ok(ApiResponse.success("Marketplace data reset successfully"));
     }
 

@@ -32,12 +32,29 @@ const Shop = () => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => {
+    setLoading(true);
+    console.log('Fetching products and categories...');
+    
     Promise.all([
-      productApi.getProducts(0, 100).catch(() => ({ data: { data: { content: [] } } })),
-      catalogApi.getCategories().catch(() => ({ data: { data: [] } })),
+      productApi.getProducts(0, 100).catch((err) => {
+        console.error('Failed to fetch products:', err);
+        return { data: { data: { content: [] } } };
+      }),
+      catalogApi.getCategories().catch((err) => {
+        console.error('Failed to fetch categories:', err);
+        return { data: { data: [] } };
+      }),
     ]).then(([p, c]) => {
-      setProducts(p.data?.data?.content || p.data?.data || []);
-      setCategories(c.data?.data || c.data || []);
+      console.log('Products Response:', p.data);
+      console.log('Categories Response:', c.data);
+      
+      const prodList = p.data?.data?.content || p.data?.data || [];
+      const catList = c.data?.data || c.data || [];
+      
+      setProducts(prodList);
+      setCategories(catList);
+      
+      if (prodList.length === 0) console.warn('API returned 0 products.');
     }).finally(() => setLoading(false));
 
     if (user?.id) {
@@ -164,6 +181,8 @@ const Shop = () => {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                 <input 
                   type="number" 
+                  id="minPrice"
+                  name="minPrice"
                   value={priceRange[0]} 
                   onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])}
                   className="w-full pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -174,6 +193,8 @@ const Shop = () => {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                 <input 
                   type="number" 
+                  id="maxPrice"
+                  name="maxPrice"
                   value={priceRange[1]} 
                   onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
                   className="w-full pl-7 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -208,6 +229,8 @@ const Shop = () => {
               {/* Sort */}
               <div className="relative flex-1 sm:w-60">
                 <select 
+                  id="sortOptions"
+                  name="sortOptions"
                   value={sort} 
                   onChange={e => setSort(e.target.value)}
                   className="w-full appearance-none px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"

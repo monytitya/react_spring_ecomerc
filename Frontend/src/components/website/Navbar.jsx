@@ -110,6 +110,8 @@ const Navbar = () => {
               <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
               <input
                 autoFocus
+                id="navbarSearch"
+                name="navbarSearch"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search products, brands, categories…"
