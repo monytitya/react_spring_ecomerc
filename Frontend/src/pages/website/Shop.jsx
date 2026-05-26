@@ -8,9 +8,9 @@ const img  = (f) => (f ? `${BASE}${f}` : null);
 
 const SORT_OPTIONS = [
   { label: 'Newest Arrivals', value: 'productId' },
-  { label: 'Price: Low to High', value: 'salePrice,asc' },
-  { label: 'Price: High to Low', value: 'salePrice,desc' },
-  { label: 'Name: A to Z', value: 'title,asc' },
+  { label: 'Price: Low to High', value: 'productPrice,asc' },
+  { label: 'Price: High to Low', value: 'productPrice,desc' },
+  { label: 'Name: A to Z', value: 'productTitle,asc' },
 ];
 
 const Shop = () => {
@@ -32,34 +32,57 @@ const Shop = () => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => {
-    setLoading(true);
-    console.log('Fetching products and categories...');
-    
-    Promise.all([
-      productApi.getProducts(0, 100).catch((err) => {
-        console.error('Failed to fetch products:', err);
-        return { data: { data: { content: [] } } };
-      }),
-      catalogApi.getCategories().catch((err) => {
-        console.error('Failed to fetch categories:', err);
-        return { data: { data: [] } };
-      }),
-    ]).then(([p, c]) => {
-      console.log('Products Response:', p.data);
-      console.log('Categories Response:', c.data);
-      
-      const prodList = p.data?.data?.content || p.data?.data || [];
-      const catList = c.data?.data || c.data || [];
-      
-      setProducts(prodList);
-      setCategories(catList);
-      
-      if (prodList.length === 0) console.warn('API returned 0 products.');
-    }).finally(() => setLoading(false));
+    let cancelled = false;
+    const fetchData = (attempt = 1) => {
+      setLoading(true);
+      console.log(`Fetching products and categories... (attempt ${attempt})`);
+
+      Promise.all([
+        productApi.getProducts(0, 100, 'productId'),
+        catalogApi.getCategories(),
+      ]).then(([p, c]) => {
+        if (cancelled) return;
+        console.log('Products Response:', p.data);
+        console.log('Categories Response:', c.data);
+
+        // Backend wraps in ApiResponse: { data: Page<ProductModel> }
+        // Page has: { content: [...], totalElements, ... }
+        const prodList =
+          p.data?.data?.content ??
+          (Array.isArray(p.data?.data) ? p.data.data : []);
+        const catList = Array.isArray(c.data?.data)
+          ? c.data.data
+          : Array.isArray(c.data)
+          ? c.data
+          : [];
+
+        setProducts(prodList);
+        setCategories(catList);
+
+        if (prodList.length === 0) console.warn('API returned 0 products.');
+      }).catch((err) => {
+        if (cancelled) return;
+        console.error(`Attempt ${attempt} failed:`, err?.message || err);
+        if (attempt < 5) {
+          // Retry with backoff when backend is starting up
+          setTimeout(() => fetchData(attempt + 1), 2000 * attempt);
+          return;
+        }
+        console.error('All retry attempts failed. No products loaded.');
+      }).finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    };
+
+    fetchData();
 
     if (user?.id) {
-      wishlistApi.get(user.id).then(r => setWishlist((r.data?.data || []).map(w => w.productId))).catch(() => {});
+      wishlistApi.get(user.id)
+        .then(r => setWishlist((r.data?.data || []).map(w => w.productId)))
+        .catch(() => {});
     }
+
+    return () => { cancelled = true; };
   }, []);
 
   // Filter Logic
@@ -96,14 +119,14 @@ const Shop = () => {
     const label = searchParams.get('label');
     if (label) list = list.filter(p => (p.productLabel || p.label)?.toLowerCase() === label.toLowerCase());
 
-    // Sort
+    // Sort (client-side mirrors the server-side sort options)
     list.sort((a, b) => {
-      const ap = a.productPrice || a.price || 0;
-      const bp = b.productPrice || b.price || 0;
-      
-      if (sort === 'salePrice,asc') return ap - bp;
-      if (sort === 'salePrice,desc') return bp - ap;
-      if (sort === 'title,asc') return (a.productTitle || a.title || '').localeCompare(b.productTitle || b.title || '');
+      const ap = a.productPrice ?? a.price ?? 0;
+      const bp = b.productPrice ?? b.price ?? 0;
+
+      if (sort === 'productPrice,asc') return ap - bp;
+      if (sort === 'productPrice,desc') return bp - ap;
+      if (sort === 'productTitle,asc') return (a.productTitle || '').localeCompare(b.productTitle || '');
       return (b.productId || 0) - (a.productId || 0); // productId desc (newest)
     });
 
