@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -172,7 +172,7 @@ export const contactApi = {
   send: (data) => api.post('/contact/send', data),
 };
 
-export const fileUrl = (filename) => `http://localhost:9090/api/files/${filename}`;
+export const fileUrl = (filename) => `${import.meta.env.VITE_API_URL || 'http://localhost:9090/api'}/files/${filename}`;
 
 export default api;
 
