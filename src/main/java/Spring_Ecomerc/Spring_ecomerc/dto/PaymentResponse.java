@@ -15,5 +15,6 @@ public class PaymentResponse {
     private String currency;
     private PaymentStatus status;
     private String qrString;
+    private String qrImage;
     private LocalDateTime createdAt;
 }

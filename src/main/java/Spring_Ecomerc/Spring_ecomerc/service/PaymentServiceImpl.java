@@ -21,26 +21,35 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final TelegramService telegramService;
+    private final KHQRService khqrService;
 
     @Override
     @Transactional
     public PaymentResponse createPayment(PaymentCreateRequest request) {
-        String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        
-        Payment payment = Payment.builder()
-                .orderId(request.getOrderId())
-                .transactionId(transactionId)
-                .amount(request.getAmount())
-                .currency(request.getCurrency())
-                .status(PaymentStatus.PENDING)
-                .createdAt(LocalDateTime.now())
-                .build();
+        if (request.getAmount() == null || request.getAmount() <= 0) {
+            throw new RuntimeException("Invalid payment amount");
+        }
 
-        payment = paymentRepository.save(payment);
-        
-        PaymentResponse response = mapToResponse(payment);
-        response.setQrString(generateMockKHQR(payment));
-        return response;
+        // Check for existing pending payment for this order
+        return paymentRepository.findAll().stream()
+                .filter(p -> p.getOrderId().equals(request.getOrderId()) && p.getStatus() == PaymentStatus.PENDING)
+                .findFirst()
+                .map(this::getPaymentResponseWithQR)
+                .orElseGet(() -> {
+                    String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                    
+                    Payment payment = Payment.builder()
+                            .orderId(request.getOrderId())
+                            .transactionId(transactionId)
+                            .amount(request.getAmount())
+                            .currency(request.getCurrency())
+                            .status(PaymentStatus.PENDING)
+                            .createdAt(LocalDateTime.now())
+                            .build();
+
+                    payment = paymentRepository.save(payment);
+                    return getPaymentResponseWithQR(payment);
+                });
     }
 
     @Override
@@ -48,9 +57,25 @@ public class PaymentServiceImpl implements PaymentService {
         Payment payment = paymentRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with transaction ID: " + transactionId));
         
+        return getPaymentResponseWithQR(payment);
+    }
+
+    private PaymentResponse getPaymentResponseWithQR(Payment payment) {
         PaymentResponse response = mapToResponse(payment);
         if (payment.getStatus() == PaymentStatus.PENDING) {
-            response.setQrString(generateMockKHQR(payment));
+            try {
+                String qrString = khqrService.generateKHQRString(
+                        "dev_bakong@abc", // Mock Merchant ID
+                        "Blueberry Store",
+                        String.format("%.2f", payment.getAmount()),
+                        payment.getCurrency(),
+                        String.valueOf(payment.getOrderId())
+                );
+                response.setQrString(qrString);
+                response.setQrImage(khqrService.generateQRCodeBase64(qrString));
+            } catch (Exception e) {
+                // Log error
+            }
         }
         return response;
     }
@@ -81,34 +106,6 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
-    }
-
-    private String generateMockKHQR(Payment p) {
-        // Tag-Length-Value (TLV) construction for EMVCo / KHQR
-        StringBuilder qr = new StringBuilder();
-        qr.append("000201"); // Payload Format Indicator
-        qr.append("010212"); // Point of Initiation: Dynamic
-        
-        // Tag 30: Merchant Account Information
-        String merchantAccount = "0016dev_bakong@abc" + "0108" + p.getTransactionId() + "0211DEVBKKHPXXX";
-        qr.append("30").append(String.format("%02d", merchantAccount.length())).append(merchantAccount);
-        
-        qr.append("52040000"); // Merchant Category Code
-        qr.append("5303").append(p.getCurrency().equalsIgnoreCase("USD") ? "840" : "116");
-        
-        String amtStr = String.format("%.2f", p.getAmount());
-        qr.append("54").append(String.format("%02d", amtStr.length())).append(amtStr);
-        
-        qr.append("5802KH");   // Country Code
-        qr.append("5915Blueberry Store"); // Merchant Name
-        qr.append("6010Phnom Penh");     // Merchant City
-        
-        String bill = String.valueOf(p.getOrderId());
-        qr.append("62").append(String.format("%02d", bill.length() + 4)).append("01").append(String.format("%02d", bill.length())).append(bill);
-        
-        qr.append("6304ABCD"); // Dummy CRC
-
-        return qr.toString();
     }
 
     private PaymentResponse mapToResponse(Payment p) {

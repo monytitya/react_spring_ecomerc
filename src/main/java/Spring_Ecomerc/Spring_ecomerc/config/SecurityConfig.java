@@ -48,6 +48,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/wishlist", "/api/wishlist/**").permitAll()
                         .requestMatchers("/api/customers", "/api/customers/**").permitAll()
                         .requestMatchers("/api/coupons", "/api/coupons/**").permitAll()
+                        .requestMatchers("/api/payments", "/api/payments/**").permitAll()
 
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

@@ -8,6 +8,7 @@ import { paymentApi, orderApi } from '../services/api';
 const Checkout = () => {
   const { invoiceNo } = useParams();
   const [qr, setQr] = useState(null);
+  const [qrImage, setQrImage] = useState(null);
   const [status, setStatus] = useState('PENDING'); // PENDING | PAID
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
@@ -27,9 +28,9 @@ const Checkout = () => {
       const actualAmount = order.dueAmount || 0;
       setAmount(actualAmount);
 
-      // 2. Create/fetch a payment record in the backend with the real amount
+      // 2. Create/fetch a payment record in the backend
       const res = await paymentApi.create({
-        orderId: invoiceNo,
+        orderId: order.orderId, // Use real order ID
         amount: actualAmount,
         currency: "USD"
       });
@@ -38,47 +39,13 @@ const Checkout = () => {
         const pData = res.data.data;
         setTransactionId(pData.transactionId);
         setStatus(pData.status);
-        
-        // 3. Generate QR locally with scannable parameters
-        generateKHQR(actualAmount, invoiceNo);
+        setQr(pData.qrString);
+        setQrImage(pData.qrImage); // Base64 from ZXing
       }
     } catch (e) {
       console.error("Checkout init failed", e);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const generateKHQR = (payAmount, billNo) => {
-    try {
-      const finalAmount = Number(payAmount);
-      const finalInvoice = String(billNo);
-
-      const merchantInfo = new MerchantInfo(
-        "dev_bakong@abc",      // Merchant Account ID
-        "Blueberry Store",     // Merchant Name
-        "Phnom Penh",          // Merchant City
-        null,                  // Merchant ID
-        "DEVBKKHPXXX",         // Acquiring Bank ID
-        {
-          currency: khqrData.currency.usd,
-          amount: finalAmount,
-          billNumber: finalInvoice,
-          storeLabel: "Blueberry E-com",
-          terminalLabel: "Online",
-          expirationTimestamp: Date.now() + (30 * 60 * 1000)
-        }
-      );
-
-      const khqr = new BakongKHQR();
-      const response = khqr.generateMerchant(merchantInfo);
-      
-      if (response && response.data && response.data.qr) {
-         setQr(response.data.qr);
-         console.log("Generated KHQR:", response.data.qr);
-      }
-    } catch (e) {
-      console.error("KHQR generation failed", e);
     }
   };
 
@@ -97,10 +64,9 @@ const Checkout = () => {
   const simulateSuccess = async () => {
     setSimulating(true);
     try {
-      await paymentApi.webhook({ 
-        transactionId: transactionId,
-        amount: amount
-      });
+      await paymentApi.simulatePaid(transactionId);
+      // Status will be updated by polling or manually here
+      setStatus('PAID');
     } catch (e) {
       alert("Simulation failed");
     } finally {
@@ -117,7 +83,7 @@ const Checkout = () => {
   useEffect(() => {
     let timer;
     if (transactionId && status !== 'PAID') {
-      timer = setInterval(pollStatus, 3000);
+      timer = setInterval(pollStatus, 5000); // Polling every 5 seconds
     }
     return () => clearInterval(timer);
   }, [transactionId, status]);
@@ -155,7 +121,11 @@ const Checkout = () => {
               </div>
 
               <div className="relative p-6 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
-                {qr && (
+                {qrImage ? (
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                    <img src={`data:image/png;base64,${qrImage}`} alt="KHQR Code" className="w-[220px] h-[220px]" />
+                  </div>
+                ) : qr && (
                   <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                     <QRCodeSVG value={qr} size={220} level="M" includeMargin={false} />
                   </div>
