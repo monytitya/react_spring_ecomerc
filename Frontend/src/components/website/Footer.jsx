@@ -51,6 +51,8 @@ const Footer = () => {
             <form className="flex gap-3 w-full lg:w-auto" onSubmit={e => e.preventDefault()}>
               <input
                 type="email"
+                id="newsletterEmail"
+                name="newsletterEmail"
                 placeholder="Enter your email"
                 className="flex-1 lg:w-72 px-5 py-3.5 rounded-xl bg-white/15 backdrop-blur text-white placeholder-blue-200 border border-white/20 outline-none focus:ring-2 focus:ring-white/30 text-sm"
               />

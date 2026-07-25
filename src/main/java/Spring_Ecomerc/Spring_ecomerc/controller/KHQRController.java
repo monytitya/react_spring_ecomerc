@@ -36,7 +36,6 @@ public class KHQRController {
     public ResponseEntity<ApiResponse<PaymentResponse>> simulatePaid(@PathVariable String transactionId) {
         BakongWebhookRequest request = new BakongWebhookRequest();
         request.setTransactionId(transactionId);
-        // Add other mock fields if necessary
         return ResponseEntity.ok(ApiResponse.success(paymentService.processWebhook(request)));
     }
 }

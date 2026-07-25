@@ -13,8 +13,9 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
-  const [amount, setAmount] = useState(0); 
+  const [amount, setAmount] = useState(0);
   const [orderData, setOrderData] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const initPayment = async () => {
     try {
@@ -22,7 +23,7 @@ const Checkout = () => {
       // 1. Fetch real order details using invoiceNo
       const orderRes = await orderApi.getByInvoice(invoiceNo);
       if (!orderRes.data?.success) throw new Error("Order not found");
-      
+
       const order = orderRes.data.data;
       setOrderData(order);
       const actualAmount = order.dueAmount || 0;
@@ -34,16 +35,21 @@ const Checkout = () => {
         amount: actualAmount,
         currency: "USD"
       });
-      
+
       if (res.data?.success) {
         const pData = res.data.data;
         setTransactionId(pData.transactionId);
         setStatus(pData.status);
         setQr(pData.qrString);
         setQrImage(pData.qrImage); // Base64 from ZXing
+
+      } else {
+        setErrorMsg(res.data?.message || "Failed to initialize payment.");
+
       }
     } catch (e) {
       console.error("Checkout init failed", e);
+      setErrorMsg(e.response?.data?.message || e.message || "Checkout initialization failed");
     } finally {
       setLoading(false);
     }
@@ -62,13 +68,17 @@ const Checkout = () => {
   };
 
   const simulateSuccess = async () => {
+    if (!transactionId) {
+      alert("Transaction ID is missing. Cannot simulate.");
+      return;
+    }
     setSimulating(true);
     try {
       await paymentApi.simulatePaid(transactionId);
-      // Status will be updated by polling or manually here
       setStatus('PAID');
     } catch (e) {
-      alert("Simulation failed");
+      console.error(e);
+      alert("Simulation failed: " + (e.response?.data?.message || e.message));
     } finally {
       setSimulating(false);
     }
@@ -93,7 +103,7 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
-        
+
         <div className="bg-brand p-6 text-white text-center rounded-b-3xl">
           <Link to="/" className="absolute left-6 top-6 p-2 rounded-xl bg-white/10 hover:bg-white/20 transition-all">
             <ArrowLeft className="w-5 h-5 text-white" />
@@ -110,6 +120,13 @@ const Checkout = () => {
               <h2 className="text-2xl font-black text-slate-900">Payment Successful!</h2>
               <p className="text-slate-500 mt-2">Check your Telegram bot for notification.</p>
               <button onClick={() => window.location.reload()} className="mt-8 w-full py-4 bg-brand text-white font-black rounded-2xl shadow-lg hover:scale-[1.02] transition-all">Back to Store</button>
+            </div>
+          ) : errorMsg ? (
+            <div className="text-center animate-in zoom-in duration-500 w-full">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-black text-slate-900">Payment Error</h2>
+              <p className="text-red-500 text-sm mt-2 p-4 bg-red-50 rounded-xl border border-red-100">{errorMsg}</p>
+              <button onClick={() => window.location.reload()} className="mt-6 w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-all">Try Again</button>
             </div>
           ) : (
             <>
@@ -144,10 +161,10 @@ const Checkout = () => {
                 </div>
                 <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">Waiting for bank confirmation...</p>
 
-                <button 
+                <button
                   onClick={simulateSuccess}
-                  disabled={simulating}
-                  className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center"
+                  disabled={simulating || !transactionId}
+                  className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center disabled:opacity-50"
                 >
                   {simulating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                   [SIMULATE] Customer Scan & Pay
@@ -157,12 +174,13 @@ const Checkout = () => {
           )}
         </div>
       </div>
-      
+
       <p className="mt-8 text-xs text-slate-400 font-medium flex items-center">
         <AlertCircle className="w-3 h-3 mr-1.5" /> Secure payment powered by Blueberry CRM
       </p>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes progress {
           0% { transform: scaleX(0); }
           100% { transform: scaleX(1); }

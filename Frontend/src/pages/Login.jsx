@@ -41,28 +41,22 @@ const Login = () => {
     try {
       const loginFn = role === 'ADMIN' ? authApi.login : authApi.customerLogin;
       const response = await loginFn(formData);
-      
-      // Backend: ApiResponse<AuthResponse>
-      // axios wraps HTTP body in response.data, ApiResponse has .data field
-      // So: axios.response.data = ApiResponse, ApiResponse.data = AuthResponse
+
       const authData = response.data?.data || response.data;
-      // AuthResponse shape: { token, role, email, name, id }
       const token = authData.token;
-      
+
       if (!token) throw new Error('No token received from server');
 
       localStorage.setItem(role === 'ADMIN' ? 'admin_token' : 'customer_token', token);
-      // Store flat user info for use in Header/Profile
       localStorage.setItem('user', JSON.stringify({
         id: authData.id,
         name: authData.name,
         email: authData.email,
         role: authData.role,
-        image: authData.image // optional
+        image: authData.image
       }));
       localStorage.setItem('role', role);
 
-      // Redirect both roles to dashboard
       navigate('/dashboard');
     } catch (err) {
       const msg =
@@ -77,17 +71,16 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 font-sans">
-      {/* Forgot Password Modal */}
       {showForgot && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md border border-slate-100"
           >
             <h2 className="text-xl font-bold text-slate-800 mb-2">Reset Password</h2>
             <p className="text-sm text-slate-500 mb-6 font-medium">Enter your account email and choose a new password.</p>
-            
+
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
@@ -102,7 +95,7 @@ const Login = () => {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">New Password</label>
                 <div className="relative group">
@@ -119,14 +112,14 @@ const Login = () => {
               </div>
 
               <div className="flex space-x-3 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowForgot(false)}
                   className="flex-1 py-3 px-4 bg-slate-50 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-all border border-slate-200/60"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={resetLoading}
                   className="flex-1 py-3 px-4 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 flex items-center justify-center"
@@ -139,7 +132,7 @@ const Login = () => {
         </div>
       )}
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full bg-white rounded-2xl shadow-xl shadow-slate-200 overflow-hidden border border-slate-100"
@@ -152,15 +145,15 @@ const Login = () => {
           </div>
           <h1 className="text-2xl font-bold">Welcome Back</h1>
           <p className="text-sidebar-200 mt-2">Sign in to Blueberry CRM</p>
-          
+
           <div className="mt-6 flex bg-white/10 p-1 rounded-xl backdrop-blur-sm">
-            <button 
+            <button
               onClick={() => setRole('ADMIN')}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${role === 'ADMIN' ? 'bg-white text-sidebar shadow-sm' : 'text-white hover:bg-white/5'}`}
             >
               Admin
             </button>
-            <button 
+            <button
               onClick={() => setRole('CUSTOMER')}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${role === 'CUSTOMER' ? 'bg-white text-sidebar shadow-sm' : 'text-white hover:bg-white/5'}`}
             >
@@ -219,7 +212,7 @@ const Login = () => {
                 <input type="checkbox" className="rounded border-slate-300 text-brand focus:ring-brand mr-2" />
                 Remember me
               </label>
-              <button 
+              <button
                 type="button"
                 onClick={() => setShowForgot(true)}
                 className="text-brand hover:underline font-medium"
@@ -246,15 +239,15 @@ const Login = () => {
 
           <div className="text-center text-slate-500 text-sm mt-8 space-y-2">
             <div>
-              Don't have an account? <span 
-                onClick={() => navigate('/register')} 
+              Don't have an account? <span
+                onClick={() => navigate('/register')}
                 className="text-brand font-medium hover:underline cursor-pointer"
               >Register here</span>
             </div>
             <div className="text-xs text-slate-400 mt-2">
               Debug: <span onClick={() => {
                 setRole('ADMIN');
-                setFormData({ email: 'admin@gmail.com', password: 'admin123' });
+                setFormData({ email: 'tityamonymac@gmail.com', password: 'admin123' });
               }} className="underline cursor-pointer">Auto-fill test admin</span>
             </div>
           </div>

@@ -1,14 +1,18 @@
 package Spring_Ecomerc.Spring_ecomerc.service;
 
-import Spring_Ecomerc.Spring_ecomerc.dto.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import Spring_Ecomerc.Spring_ecomerc.dto.AuthResponse;
+import Spring_Ecomerc.Spring_ecomerc.dto.CustomerRegisterRequest;
+import Spring_Ecomerc.Spring_ecomerc.dto.LoginRequest;
+import Spring_Ecomerc.Spring_ecomerc.dto.PasswordResetRequest;
 import Spring_Ecomerc.Spring_ecomerc.entity.Admin;
 import Spring_Ecomerc.Spring_ecomerc.entity.Customer;
 import Spring_Ecomerc.Spring_ecomerc.repository.AdminRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.CustomerRepository;
 import Spring_Ecomerc.Spring_ecomerc.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -25,10 +29,12 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), admin.getAdminPass())) {
             throw new RuntimeException("Invalid password");
+
         }
 
         String token = jwtTokenProvider.generateTokenFromEmail(admin.getAdminEmail(), "ADMIN");
-        return new AuthResponse(token, "ADMIN", admin.getAdminEmail(), admin.getAdminName(), admin.getAdminId(), admin.getAdminImage());
+        return new AuthResponse(token, "ADMIN", admin.getAdminEmail(), admin.getAdminName(), admin.getAdminId(),
+                admin.getAdminImage());
     }
 
     public AuthResponse loginCustomer(LoginRequest request) {
@@ -66,7 +72,6 @@ public class AuthService {
     }
 
     public void resetPassword(PasswordResetRequest request) {
-        // Try searching in Admin first
         var adminOpt = adminRepository.findByAdminEmail(request.getEmail());
         if (adminOpt.isPresent()) {
             Admin admin = adminOpt.get();
@@ -75,7 +80,6 @@ public class AuthService {
             return;
         }
 
-        // Try searching in Customer
         var customerOpt = customerRepository.findByCustomerEmail(request.getEmail());
         if (customerOpt.isPresent()) {
             Customer customer = customerOpt.get();

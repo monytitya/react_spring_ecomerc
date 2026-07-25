@@ -70,7 +70,7 @@ const Cart = () => {
     } catch (err) {
       console.error("Checkout error:", err);
       // Fallback if API fails
-      navigate('/checkout/new');
+      alert("Error placing order. Please try again.");
     } finally {
       setPlacingOrder(false);
     }

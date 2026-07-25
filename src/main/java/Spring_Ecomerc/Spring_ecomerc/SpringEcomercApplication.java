@@ -8,7 +8,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import org.springframework.scheduling.annotation.EnableScheduling;
+
 @SpringBootApplication
+@EnableScheduling
+
 public class SpringEcomercApplication {
 
 	public static void main(String[] args) {
@@ -18,7 +22,7 @@ public class SpringEcomercApplication {
 	@Bean
 	CommandLineRunner init(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
 		return args -> {
-			String testEmail = "admin@gmail.com";
+			String testEmail = "tityamonymac@gmail.com";
 			Admin admin = adminRepository.findByAdminEmail(testEmail).orElse(new Admin());
 
 			admin.setAdminName("Admin User");

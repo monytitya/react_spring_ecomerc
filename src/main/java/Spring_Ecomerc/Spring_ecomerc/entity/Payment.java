@@ -22,16 +22,21 @@ public class Payment {
     @Column(name = "transaction_id", unique = true)
     private String transactionId;
 
+    @Column(name = "md5")
+    private String md5;
+
     @Column(name = "amount")
     private Double amount;
 
     @Column(name = "currency")
     private String currency; // "USD" or "KHR"
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Builder.Default
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -5,8 +5,11 @@ import Spring_Ecomerc.Spring_ecomerc.dto.PaymentCreateRequest;
 import Spring_Ecomerc.Spring_ecomerc.dto.PaymentResponse;
 import Spring_Ecomerc.Spring_ecomerc.entity.Payment;
 import Spring_Ecomerc.Spring_ecomerc.entity.PaymentStatus;
+import Spring_Ecomerc.Spring_ecomerc.repository.CustomerOrderRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.PaymentRepository;
+import Spring_Ecomerc.Spring_ecomerc.repository.PendingOrderRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +25,20 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final TelegramService telegramService;
     private final KHQRService khqrService;
+    private final CustomerOrderRepository customerOrderRepository;
+    private final PendingOrderRepository pendingOrderRepository;
+
+    @Value("${payment.khqr.merchant-id}")
+    private String merchantId;
+
+    @Value("${payment.khqr.merchant-name}")
+    private String merchantName;
+
+    @Value("${payment.khqr.merchant-city}")
+    private String merchantCity;
+
+    @Value("${khqr.api.token:}")
+    private String bakongToken;
 
     @Override
     @Transactional
@@ -31,8 +48,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         // Check for existing pending payment for this order
-        return paymentRepository.findAll().stream()
-                .filter(p -> p.getOrderId().equals(request.getOrderId()) && p.getStatus() == PaymentStatus.PENDING)
+        return paymentRepository.findByOrderId(request.getOrderId()).stream()
+                .filter(p -> p.getStatus() == PaymentStatus.PENDING)
                 .findFirst()
                 .map(this::getPaymentResponseWithQR)
                 .orElseGet(() -> {
@@ -65,12 +82,21 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.PENDING) {
             try {
                 String qrString = khqrService.generateKHQRString(
-                        "dev_bakong@abc", // Mock Merchant ID
-                        "Blueberry Store",
+                        merchantId,
+                        merchantName,
+                        merchantCity,
                         String.format("%.2f", payment.getAmount()),
                         payment.getCurrency(),
                         String.valueOf(payment.getOrderId())
                 );
+                
+                if (payment.getMd5() == null) {
+                    byte[] md5Bytes = java.security.MessageDigest.getInstance("MD5")
+                            .digest(qrString.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    payment.setMd5(java.util.HexFormat.of().formatHex(md5Bytes));
+                    paymentRepository.save(payment);
+                }
+
                 response.setQrString(qrString);
                 response.setQrImage(khqrService.generateQRCodeBase64(qrString));
             } catch (Exception e) {
@@ -89,6 +115,21 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.PAID);
             paymentRepository.save(payment);
+
+            // Update CustomerOrder Status
+            customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
+                order.setOrderStatus("Complete");
+                customerOrderRepository.save(order);
+            });
+
+            // Update PendingOrder Status (if applicable)
+            pendingOrderRepository.findByInvoiceNo(
+                customerOrderRepository.findById(payment.getOrderId().intValue())
+                    .map(o -> o.getInvoiceNo()).orElse(0L)
+            ).forEach(po -> {
+                po.setOrderStatus("Paid");
+                pendingOrderRepository.save(po);
+            });
 
             // Notify via Telegram
             telegramService.sendPaymentNotification(
@@ -118,5 +159,61 @@ public class PaymentServiceImpl implements PaymentService {
                 .status(p.getStatus())
                 .createdAt(p.getCreatedAt())
                 .build();
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 5000)
+    public void checkPaymentStatusFromBakong() {
+        if (bakongToken == null || bakongToken.isEmpty()) return;
+        
+        java.util.List<Payment> pendingPayments = paymentRepository.findByStatus(PaymentStatus.PENDING).stream()
+                .filter(p -> p.getMd5() != null && !p.getMd5().isEmpty())
+                .collect(Collectors.toList());
+
+        if (pendingPayments.isEmpty()) return;
+
+        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+        String url = "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5";
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setBearerAuth(bakongToken);
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+        for (Payment payment : pendingPayments) {
+            try {
+                java.util.Map<String, String> body = new java.util.HashMap<>();
+                body.put("md5", payment.getMd5());
+                org.springframework.http.HttpEntity<java.util.Map<String, String>> request = new org.springframework.http.HttpEntity<>(body, headers);
+                
+                org.springframework.http.ResponseEntity<java.util.Map> response = restTemplate.postForEntity(url, request, java.util.Map.class);
+                
+                if (response.getBody() != null && response.getBody().get("responseCode") != null) {
+                    int responseCode = Integer.parseInt(response.getBody().get("responseCode").toString());
+                    if (responseCode == 0) { // Success
+                        payment.setStatus(PaymentStatus.PAID);
+                        paymentRepository.save(payment);
+
+                        customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
+                            order.setOrderStatus("Complete");
+                            customerOrderRepository.save(order);
+                        });
+
+                        pendingOrderRepository.findByInvoiceNo(
+                            customerOrderRepository.findById(payment.getOrderId().intValue())
+                                .map(o -> o.getInvoiceNo()).orElse(0L)
+                        ).forEach(po -> {
+                            po.setOrderStatus("Paid");
+                            pendingOrderRepository.save(po);
+                        });
+
+                        telegramService.sendPaymentNotification(
+                                String.valueOf(payment.getOrderId()),
+                                payment.getAmount(),
+                                "Bakong API (Auto Polled)"
+                        );
+                    }
+                }
+            } catch (Exception e) {
+                // Silently ignore to continue polling other pending payments
+            }
+        }
     }
 }

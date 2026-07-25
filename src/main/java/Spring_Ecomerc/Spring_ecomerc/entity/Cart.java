@@ -4,15 +4,18 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "cart")
+@Table(name = "cart_items")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Cart {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
     @Column(name = "p_id")
-    private Integer pId;
+    private Integer productId;
 
     @Column(name = "ip_add", nullable = false)
     private String ipAdd;
@@ -27,8 +30,11 @@ public class Cart {
     private String size;
 
     // Getters and Setters
-    public Integer getPId() { return pId; }
-    public void setPId(Integer pId) { this.pId = pId; }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public Integer getProductId() { return productId; }
+    public void setProductId(Integer productId) { this.productId = productId; }
 
     public String getIpAdd() { return ipAdd; }
     public void setIpAdd(String ipAdd) { this.ipAdd = ipAdd; }

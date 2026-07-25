@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Mail, Phone, MapPin, Clock, Send, Loader2, CheckCircle, MessageSquare } from 'lucide-react';
-import { cmsApi } from '../../services/api';
+import { cmsApi, contactApi } from '../../services/api';
 
 const Contact = () => {
   const [contact, setContact]   = useState(null);
@@ -32,10 +32,18 @@ const Contact = () => {
       return;
     }
     setSending(true);
-    // Simulate sending (no real API endpoint)
-    await new Promise(r => setTimeout(r, 1500));
-    setSending(false);
-    setSent(true);
+    try {
+      await contactApi.send(form);
+      setSent(true);
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to send message. Please try again.';
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   const INFO = [
