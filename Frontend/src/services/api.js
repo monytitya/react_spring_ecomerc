@@ -38,6 +38,7 @@ export const authApi = {
   customerLogin: (credentials) => api.post('/auth/customer/login', credentials),
   register: (data) => api.post('/auth/customer/register', data),
   resetPassword: (data) => api.post('/auth/reset-password', data),
+  loginOAuth2Code: (data) => api.post('/auth/oauth2/code', data),
 };
 
 export const dashboardApi = {

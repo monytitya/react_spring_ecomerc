@@ -38,4 +38,10 @@ public class AuthController {
         authService.resetPassword(request);
         return ResponseEntity.ok(ApiResponse.success("Password reset successful"));
     }
+
+    @PostMapping("/oauth2/code")
+    public ResponseEntity<ApiResponse<AuthResponse>> oauth2CodeLogin(@Valid @RequestBody OAuth2CodeRequest request) {
+        AuthResponse response = authService.loginWithOAuth2Code(request);
+        return ResponseEntity.ok(ApiResponse.success("OAuth2 login successful", response));
+    }
 }

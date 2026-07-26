@@ -20,22 +20,47 @@ public class SpringEcomercApplication {
 	}
 
 	@Bean
-	CommandLineRunner init(AdminRepository adminRepository, PasswordEncoder passwordEncoder) {
+	CommandLineRunner init(AdminRepository adminRepository,
+						  Spring_Ecomerc.Spring_ecomerc.repository.CustomerRepository customerRepository,
+						  PasswordEncoder passwordEncoder) {
 		return args -> {
-			String testEmail = "tityamonymac@gmail.com";
-			Admin admin = adminRepository.findByAdminEmail(testEmail).orElse(new Admin());
+			// Seed Admin Accounts
+			String[][] admins = {
+				{"tityamonymac@gmail.com", "Admin User", "admin123"},
+				{"lolo@gmail.com", "Lolo Admin", "admin123"},
+				{"admin@mail.com", "Default Admin", "Password@123"}
+			};
 
-			admin.setAdminName("Admin User");
-			admin.setAdminEmail(testEmail);
-			admin.setAdminPass(passwordEncoder.encode("admin123"));
-			admin.setAdminImage("admin-default.png");
-			admin.setAdminCountry("USA");
-			admin.setAdminJob("Super Admin");
-			admin.setAdminAbout("Initial system administrator");
+			for (String[] a : admins) {
+				String email = a[0];
+				Admin admin = adminRepository.findByAdminEmail(email).orElse(new Admin());
+				admin.setAdminName(a[1]);
+				admin.setAdminEmail(email);
+				admin.setAdminPass(passwordEncoder.encode(a[2]));
+				admin.setAdminImage("admin-default.png");
+				admin.setAdminCountry("Cambodia");
+				admin.setAdminJob("System Administrator");
+				admin.setAdminAbout("Initial system administrator account");
+				adminRepository.save(admin);
+			}
 
-			adminRepository.save(admin);
+			// Seed Customer Account
+			String custEmail = "customer@mail.com";
+			if (!customerRepository.existsByCustomerEmail(custEmail)) {
+				Spring_Ecomerc.Spring_ecomerc.entity.Customer customer = new Spring_Ecomerc.Spring_ecomerc.entity.Customer();
+				customer.setCustomerName("Test Customer");
+				customer.setCustomerEmail(custEmail);
+				customer.setCustomerPass(passwordEncoder.encode("customer123"));
+				customer.setCustomerCountry("Cambodia");
+				customer.setCustomerCity("Phnom Penh");
+				customer.setCustomerContact("012345678");
+				customer.setCustomerAddress("Phnom Penh");
+				customerRepository.save(customer);
+			}
+
 			System.out.println("----------------------------------------------");
-			System.out.println("TEST ADMIN READY: " + testEmail + " / admin123");
+			System.out.println("TEST ADMINS READY: tityamonymac@gmail.com, lolo@gmail.com, admin@mail.com (Password: admin123)");
+			System.out.println("TEST CUSTOMER READY: customer@mail.com (Password: customer123)");
 			System.out.println("----------------------------------------------");
 		};
 	}

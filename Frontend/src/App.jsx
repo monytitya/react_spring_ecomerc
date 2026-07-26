@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AdminLayout    from './components/AdminLayout';
 import Login          from './pages/Login';
 import Register       from './pages/Register';
+import OAuth2Callback from './pages/OAuth2Callback';
 import Dashboard      from './pages/Dashboard';
 import Customers      from './pages/Customers';
 import Orders         from './pages/Orders';
@@ -61,6 +62,7 @@ function App() {
         {/* ══════════════ Auth pages ══════════════ */}
         <Route path="/login"                   element={<Login />} />
         <Route path="/register"                element={<Register />} />
+        <Route path="/oauth2/callback"         element={<OAuth2Callback />} />
         <Route path="/checkout/:invoiceNo"     element={<Checkout />} />
 
         {/* ══════════════ Protected Dashboard ══════════════ */}
