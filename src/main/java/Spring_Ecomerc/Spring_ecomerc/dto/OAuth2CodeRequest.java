@@ -10,6 +10,6 @@ public class OAuth2CodeRequest {
     private String code;
 
     private String redirectUri;
-    
-    private String provider; // e.g. "google" (default)
+
+    private String provider;
 }

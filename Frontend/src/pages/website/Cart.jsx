@@ -43,18 +43,18 @@ const Cart = () => {
     if (items.length === 0) return;
     setPlacingOrder(true);
     try {
-      // Get the customer ID if logged in (usually stored in localstorage or decoded from token)
-      // For now, we'll try to find it from localStorage if it exists
-      const customerStr = localStorage.getItem('customer');
-      const customer = customerStr ? JSON.parse(customerStr) : null;
+      // Get the logged-in user info from localStorage (login stores it under 'user')
+      const userStr = localStorage.getItem('user');
+      const user = userStr ? JSON.parse(userStr) : null;
       
       // PlaceOrderRequest requires: customerId, dueAmount, qty, size, productId
       // We'll use the first item to simplify for this flow, or the backend could handle multiple (usually)
       // Standard flow: placeOrder creates a CustomerOrder and PendingOrder and returns it with invoiceNo
       const firstItem = items[0];
       const payload = {
-        customerId: customer?.customerId || null,
-        dueAmount: total,
+        customerId: user?.id || null,
+        // backend expects an integer dueAmount (stored as Integer), round to nearest whole dollar
+        dueAmount: Math.round(total),
         qty: firstItem.qty || 1,
         size: firstItem.size || 'M',
         productId: firstItem.pId || firstItem.productId
@@ -69,8 +69,9 @@ const Cart = () => {
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      // Fallback if API fails
-      alert("Error placing order. Please try again.");
+      // Show server-provided message when available to aid debugging
+      const serverMsg = err?.response?.data?.message || err?.response?.data || err?.message;
+      alert("Error placing order: " + serverMsg);
     } finally {
       setPlacingOrder(false);
     }
