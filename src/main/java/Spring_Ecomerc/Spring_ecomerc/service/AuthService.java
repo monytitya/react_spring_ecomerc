@@ -7,10 +7,17 @@ import Spring_Ecomerc.Spring_ecomerc.repository.AdminRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.CustomerRepository;
 import Spring_Ecomerc.Spring_ecomerc.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,13 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RestTemplate restTemplate;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id:dummy-google-client-id}")
+    private String googleClientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret:dummy-google-client-secret}")
+    private String googleClientSecret;
 
     public AuthResponse loginAdmin(LoginRequest request) {
         Admin admin = adminRepository.findByAdminEmail(request.getEmail())
@@ -87,7 +101,96 @@ public class AuthService {
     }
 
     public AuthResponse loginWithOAuth2Code(OAuth2CodeRequest request) {
-        // This is a placeholder for OAuth2 login implementation
-        throw new UnsupportedOperationException("OAuth2 login is not implemented yet");
+        if (googleClientId == null || googleClientId.startsWith("dummy")) {
+            throw new RuntimeException("Google OAuth2 Client ID is not configured. Please set GOOGLE_CLIENT_ID in your environment.");
+        }
+
+        String redirectUri = request.getRedirectUri();
+        if (redirectUri == null || redirectUri.trim().isEmpty()) {
+            redirectUri = "http://localhost:5173/oauth2/callback";
+        }
+
+        // 1. Exchange code for Google Access Token
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+        body.add("code", request.getCode());
+        body.add("client_id", googleClientId);
+        body.add("client_secret", googleClientSecret);
+        body.add("redirect_uri", redirectUri);
+        body.add("grant_type", "authorization_code");
+
+        HttpEntity<MultiValueMap<String, String>> tokenRequest = new HttpEntity<>(body, headers);
+
+        ResponseEntity<Map> tokenResponse;
+        try {
+            tokenResponse = restTemplate.postForEntity(
+                    "https://oauth2.googleapis.com/token",
+                    tokenRequest,
+                    Map.class
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("OAuth2 token exchange failed: " + e.getMessage(), e);
+        }
+
+        if (!tokenResponse.getStatusCode().is2xxSuccessful() || tokenResponse.getBody() == null) {
+            throw new RuntimeException("Failed to exchange code with Google");
+        }
+
+        String accessToken = (String) tokenResponse.getBody().get("access_token");
+        if (accessToken == null) {
+            throw new RuntimeException("Access token not returned by Google");
+        }
+
+        // 2. Fetch User Profile from Google UserInfo endpoint
+        HttpHeaders userHeaders = new HttpHeaders();
+        userHeaders.setBearerAuth(accessToken);
+        HttpEntity<Void> userRequest = new HttpEntity<>(userHeaders);
+
+        ResponseEntity<Map> userResponse;
+        try {
+            userResponse = restTemplate.exchange(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    HttpMethod.GET,
+                    userRequest,
+                    Map.class
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch Google user info: " + e.getMessage(), e);
+        }
+
+        if (!userResponse.getStatusCode().is2xxSuccessful() || userResponse.getBody() == null) {
+            throw new RuntimeException("Failed to fetch user profile from Google");
+        }
+
+        Map<String, Object> userInfo = userResponse.getBody();
+        String email = (String) userInfo.get("email");
+        String name = (String) userInfo.get("name");
+        String picture = (String) userInfo.get("picture");
+
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Google account did not return an email address");
+        }
+
+        // 3. Find or register Customer in DB
+        Customer customer = customerRepository.findByCustomerEmail(email).orElseGet(() -> {
+            Customer newCustomer = Customer.builder()
+                    .customerName(name != null && !name.trim().isEmpty() ? name : email.split("@")[0])
+                    .customerEmail(email)
+                    .customerPass(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .customerImage(picture)
+                    .build();
+            return customerRepository.save(newCustomer);
+        });
+
+        if (picture != null && (customer.getCustomerImage() == null || customer.getCustomerImage().isEmpty())) {
+            customer.setCustomerImage(picture);
+            customer = customerRepository.save(customer);
+        }
+
+        // 4. Issue JWT Token
+        String token = jwtTokenProvider.generateTokenFromEmail(customer.getCustomerEmail(), "CUSTOMER");
+        return new AuthResponse(token, "CUSTOMER", customer.getCustomerEmail(), customer.getCustomerName(), customer.getCustomerId(), customer.getCustomerImage());
     }
-}
+}

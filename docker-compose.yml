@@ -41,8 +41,12 @@ services:
       DB_URL: ${DB_URL:-jdbc:postgresql://db:5432/ecomerc_web}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:5173/oauth2/callback}
 
     depends_on:
       db:
