@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, Star, ShoppingBag, X, ChevronDown, Heart, Loader2 } from 'lucide-react';
+import { Search, SlidersHorizontal, Star, ShoppingBag, X, ChevronDown, Heart, Loader2, ShoppingCart, Check } from 'lucide-react';
 import { productApi, catalogApi, wishlistApi, fileUrl } from '../../services/api';
+import { useCart } from '../../context/CartContext';
 
 const BASE = 'http://localhost:9090/api/files/';
 const img  = (f) => (f ? `${BASE}${f}` : null);
@@ -30,6 +31,16 @@ const Shop = () => {
 
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user') || 'null');
+  const { addToCart } = useCart();
+  const [addedMap, setAddedMap] = useState({});
+
+  const handleAddToCart = async (e, product) => {
+    e.stopPropagation();
+    const ok = await addToCart(product, 1);
+    if (!ok) { navigate('/login'); return; }
+    setAddedMap(prev => ({ ...prev, [product.productId]: true }));
+    setTimeout(() => setAddedMap(prev => ({ ...prev, [product.productId]: false })), 2000);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -336,6 +347,18 @@ const Shop = () => {
                           <span className="text-lg font-black text-slate-900">${currentPrice}</span>
                           {discount > 0 && <span className="text-xs font-bold text-slate-400 line-through ml-2">${oldPrice}</span>}
                         </div>
+                        <button
+                          onClick={e => handleAddToCart(e, product)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                            addedMap[product.productId]
+                              ? 'bg-emerald-500 text-white'
+                              : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                          }`}
+                        >
+                          {addedMap[product.productId]
+                            ? <><Check className="w-3.5 h-3.5" /> Added</>
+                            : <><ShoppingCart className="w-3.5 h-3.5" /> Add</>}
+                        </button>
                       </div>
                     </div>
                   </div>

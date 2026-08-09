@@ -1,22 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Heart, User, Menu, X, Search, LogOut, LayoutDashboard, Trash2, ArrowRight, Loader2, ShoppingBag } from 'lucide-react';
-import { cartApi, wishlistApi } from '../../services/api';
+import { ShoppingCart, Heart, User, Menu, X, Search, LogOut, LayoutDashboard, Trash2, ArrowRight, Loader2, ShoppingBag, ChevronDown, Flame, Truck, Plus, Minus } from 'lucide-react';
+import { wishlistApi, catalogApi } from '../../services/api';
+import { useCart } from '../../context/CartContext';
 
 const BASE = 'http://localhost:9090/api/files/';
-const img  = (f) => (f ? `${BASE}${f}` : null);
+const img = (f) => (f ? `${BASE}${f}` : null);
+
+/* ── Isolated CartItem component with local useState for qty ── */
+const CartItem = ({ item, onDelete, onQtyChange }) => {
+  const [qty, setQty] = useState(item.qty || 1);
+  const [updating, setUpdating] = useState(false);
+  const itemId = item.pId ?? item.pid ?? item.productId ?? item.id;
+  const price = item.productPrice ?? 0;
+  const image = img(item.productImg || item.imageName || item.imageFile);
+  const subtotal = price * qty;
+
+  const handleDecrease = async () => {
+    if (updating) return;
+    if (qty <= 1) {
+      onDelete(itemId, qty);
+      return;
+    }
+    const newQty = qty - 1;
+    setQty(newQty); // immediate UI update
+    setUpdating(true);
+    try {
+      await onQtyChange(itemId, newQty, price);
+    } catch {
+      setQty(qty); // rollback
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleIncrease = async () => {
+    if (updating) return;
+    const newQty = qty + 1;
+    setQty(newQty); // immediate UI update
+    setUpdating(true);
+    try {
+      await onQtyChange(itemId, newQty, price);
+    } catch {
+      setQty(qty); // rollback
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-4">
+      <div className="w-20 h-20 bg-slate-50 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100">
+        {image
+          ? <img src={image} alt={item.productTitle} className="w-full h-full object-cover" />
+          : <ShoppingBag className="w-8 h-8 text-slate-300 m-auto mt-6" />}
+      </div>
+
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex justify-between items-start gap-2">
+          <h4 className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug">
+            {item.productTitle || item.title}
+          </h4>
+          <button
+            onClick={() => onDelete(itemId, qty)}
+            className="flex-shrink-0 p-1 text-slate-300 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="mt-auto flex items-center justify-between">
+          {/* ─── Qty Controls ─── */}
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-0.5">
+            <button
+              onClick={handleDecrease}
+              disabled={updating}
+              className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="w-7 text-center text-xs font-extrabold text-slate-800">{qty}</span>
+            <button
+              onClick={handleIncrease}
+              disabled={updating}
+              className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700 hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className="font-black text-blue-600 text-sm">${subtotal.toFixed(2)}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 
 const Navbar = () => {
+  const { cartCount, cartItems, setCartItems, removeFromCart, updateQty, refreshCart } = useCart();
+
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [wishlistCount, setWishlistCount] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
+  const [categories, setCategories] = useState([]);
+  const [catDropdownOpen, setCatDropdownOpen] = useState(false);
+
   // Cart Sidebar State
   const [cartSidebarOpen, setCartSidebarOpen] = useState(false);
-  const [cartItems, setCartItems] = useState([]);
   const [cartLoading, setCartLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -32,26 +126,20 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      cartApi.get().then(r => {
-        setCartItems(r.data?.data || []);
-        const totalQty = (r.data?.data || []).reduce((sum, item) => sum + (item.qty || 0), 0);
-        setCartCount(totalQty);
-      }).catch(() => {});
-      if (user?.id) {
-        wishlistApi.get(user.id).then(r => setWishlistCount(r.data?.data?.length || 0)).catch(() => {});
-      }
+    catalogApi.getCategories().then(r => {
+      const catList = Array.isArray(r.data?.data) ? r.data.data : (Array.isArray(r.data) ? r.data : []);
+      setCategories(catList);
+    }).catch(() => { });
+
+    if (isLoggedIn && user?.id) {
+      wishlistApi.get(user.id).then(r => setWishlistCount(r.data?.data?.length || 0)).catch(() => { });
     }
   }, [isLoggedIn]);
 
   const loadCart = () => {
     if (!isLoggedIn) return;
     setCartLoading(true);
-    cartApi.get().then(r => {
-      setCartItems(r.data?.data || []);
-      const totalQty = (r.data?.data || []).reduce((sum, item) => sum + (item.qty || 0), 0);
-      setCartCount(totalQty);
-    }).finally(() => setCartLoading(false));
+    refreshCart().finally(() => setCartLoading(false));
   };
 
   const handleCartClick = (e) => {
@@ -63,13 +151,15 @@ const Navbar = () => {
     setCartSidebarOpen(true);
     loadCart();
   };
-  const handleRemoveItem = async (productId) => {
-    const itemToRemove = cartItems.find(i => i.productId === productId || i.pId === productId);
-    const qtyToRemove = itemToRemove ? (itemToRemove.qty || 0) : 0;
-    await cartApi.remove(productId).catch(() => {});
-    setCartItems(prev => prev.filter(i => i.productId !== productId && i.pId !== productId));
-    setCartCount(prev => Math.max(0, prev - qtyToRemove));
-  };
+
+  // Cart sidebar handlers — delegate to CartContext
+  const handleQtyChange = useCallback((itemId, newQty, price) => {
+    updateQty(itemId, newQty, price);
+  }, [updateQty]);
+
+  const handleRemoveItem = useCallback(async (targetId) => {
+    await removeFromCart(targetId);
+  }, [removeFromCart]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -82,236 +172,216 @@ const Navbar = () => {
     if (searchQuery.trim()) {
       navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
-      setSearchQuery('');
     }
   };
 
-  const navLinks = [
-    { to: '/home', label: 'Home' },
-    { to: '/shop', label: 'Shop' },
-    { to: '/about', label: 'About' },
-    { to: '/contact', label: 'Contact' },
-  ];
-
   return (
     <>
-      {/* Search overlay */}
-      {searchOpen && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-24 animate-in fade-in duration-200"
-          onClick={() => setSearchOpen(false)}
-        >
-          <form
-            onSubmit={handleSearch}
-            onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl overflow-hidden"
-          >
-            <div className="flex items-center px-6 py-4 gap-4">
-              <Search className="w-5 h-5 text-slate-400 flex-shrink-0" />
-              <input
-                autoFocus
-                id="navbarSearch"
-                name="navbarSearch"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search products, brands, categories…"
-                className="flex-1 text-lg text-slate-800 placeholder-slate-400 outline-none bg-transparent"
-              />
-              <button type="button" onClick={() => setSearchOpen(false)}>
-                <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Main Dark Header */}
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#0f172a] ${
-          scrolled ? 'shadow-xl shadow-blue-900/20' : ''
-        }`}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-20">
-            {/* Logo */}
-            <Link to="/home" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-shadow">
-                <span className="text-white font-black text-sm">B</span>
-              </div>
-              <span className="text-xl font-black tracking-tight text-white">
-                Blueberry
-              </span>
-            </Link>
-
-            {/* Desktop Nav */}
-            <nav className="hidden lg:flex items-center gap-1">
-              {navLinks.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  className={({ isActive }) =>
-                    `px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                        : 'text-blue-100 hover:text-white hover:bg-white/10'
-                    }`
-                  }
-                >
-                  {label}
-                </NavLink>
-              ))}
-            </nav>
-
-            {/* Right Actions */}
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              <button
-                onClick={() => setSearchOpen(true)}
-                className="p-2.5 rounded-xl transition-all text-blue-100 hover:bg-white/10 hover:text-white"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-
-              {/* Wishlist */}
-              <Link to="/wishlist" className="relative p-2.5 rounded-xl transition-all group">
-                <Heart className="w-5 h-5 transition-colors text-blue-100 group-hover:text-red-300" />
-                {wishlistCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-red-500/30">
-                    {wishlistCount}
-                  </span>
-                )}
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+        {/* Top Announcement Bar */}
+        <div className="bg-[#050B14] text-white text-xs py-2 px-4 border-b border-slate-800/80">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center gap-2 font-medium text-slate-300">
+              <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400 animate-pulse" />
+              <span>Summer Sale is Live! Get Up to 60% OFF on Selected Items</span>
+              <Link to="/shop?label=sale" className="text-blue-400 font-bold hover:underline ml-1 flex items-center gap-0.5">
+                Shop Now <ArrowRight className="w-3 h-3 inline" />
               </Link>
-
-              {/* Cart Button */}
-              <button onClick={handleCartClick} className="relative p-2.5 rounded-xl transition-all group">
-                <ShoppingCart className="w-5 h-5 transition-colors text-blue-100 group-hover:text-amber-300" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-amber-400 text-slate-900 text-[9px] font-bold rounded-full flex items-center justify-center shadow-lg shadow-amber-400/30">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Admin/Dashboard Fast Action Button */}
-              {isLoggedIn && (role === 'ADMIN' || role === 'admin') && (
-                <Link
-                  to="/dashboard"
-                  className="hidden xl:flex items-center gap-2 ml-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-600/30 hover:shadow-blue-500/50 transition-all hover:-translate-y-0.5"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-blue-200" />
-                  Dashboard
-                </Link>
-              )}
-
-              {/* Auth */}
-              {isLoggedIn ? (
-                <div className="relative group hidden lg:block ml-2">
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all text-blue-100 hover:bg-white/10">
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold border border-blue-500/30">
-                      {(user?.firstName?.[0] || user?.username?.[0] || 'U').toUpperCase()}
-                    </div>
-                    <span className="hidden xl:block text-white group-hover:text-blue-100 transition-colors">
-                      {user?.firstName || user?.username || 'Account'}
-                    </span>
-                  </button>
-                  {/* Dropdown */}
-                  <div className="absolute right-0 top-full pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                    <div className="bg-white rounded-2xl shadow-xl border border-slate-100 py-2">
-                      <Link to="/orders" className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                        <User className="w-4 h-4 ztext-slate-400" /> My Orders
-                      </Link>
-                      {(role === 'ADMIN' || role === 'admin') && (
-                        <Link to="/dashboard" className="xl:hidden flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                          <LayoutDashboard className="w-4 h-4 text-slate-400" /> Admin Dashboard
-                        </Link>
-                      )}
-                      <div className="border-t border-slate-100 my-1" />
-                      <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors">
-                        <LogOut className="w-4 h-4 opacity-70" /> Logout
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <Link
-                  to="/login"
-                  className="hidden lg:flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/25 transition-all hover:shadow-blue-500/40 hover:-translate-y-0.5 ml-2"
-                >
-                  <User className="w-4 h-4" />
-                  Sign In
-                </Link>
-              )}
-
-              {/* Mobile menu toggle */}
-              <button
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="lg:hidden p-2.5 rounded-xl transition-all text-blue-100 hover:bg-white/10"
-              >
-                {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
+            </div>
+            <div className="hidden md:flex items-center gap-6 text-slate-300 font-medium">
+              <span className="flex items-center gap-1.5">
+                <Truck className="w-3.5 h-3.5 text-blue-400" /> Free Shipping on orders over $99
+              </span>
+              <span className="text-slate-600">|</span>
+              <Link to="/contact" className="hover:text-white transition-colors">Help Center</Link>
             </div>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {menuOpen && (
-          <div className="lg:hidden bg-[#0f172a] border-t border-white/10 shadow-2xl animate-in slide-in-from-top-2 duration-200">
-            <div className="px-4 py-4 space-y-1">
-              {navLinks.map(({ to, label }) => (
-                <NavLink
-                  key={to}
-                  to={to}
-                  onClick={() => setMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `block px-4 py-3.5 rounded-xl text-sm font-semibold transition-colors ${
-                      isActive ? 'bg-blue-600 text-white' : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                    }`
-                  }
-                >
-                  {label}
+        {/* Main Navbar */}
+        <div className={`bg-white transition-shadow duration-300 border-b border-slate-100 ${scrolled ? 'shadow-md shadow-slate-200/50' : ''}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16 lg:h-20 gap-4">
+              {/* Brand Logo */}
+              <Link to="/home" className="flex items-center gap-2.5 flex-shrink-0 group">
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30 group-hover:scale-105 transition-transform">
+                  <span className="text-white font-black text-xl tracking-tighter">A</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-black tracking-tight text-slate-900 leading-none">
+                    E-comershop
+                  </span>
+                </div>
+              </Link>
+
+              {/* Navigation Links */}
+              <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
+                <NavLink to="/home" className={({ isActive }) => `px-3.5 py-2 text-sm font-bold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'}`}>
+                  Home
                 </NavLink>
-              ))}
-              <div className="pt-3 pb-2 border-t border-white/10 mt-3">
+                <NavLink to="/shop" className={({ isActive }) => `px-3.5 py-2 text-sm font-bold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'}`}>
+                  Shop
+                </NavLink>
+
+                {/* Categories Dropdown */}
+                <div className="relative group" onMouseEnter={() => setCatDropdownOpen(true)} onMouseLeave={() => setCatDropdownOpen(false)}>
+                  <button className="flex items-center gap-1 px-3.5 py-2 text-sm font-bold text-slate-700 hover:text-blue-600 transition-colors">
+                    Categories <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-blue-600" />
+                  </button>
+                  {catDropdownOpen && (
+                    <div className="absolute top-full left-0 w-56 pt-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 p-2 space-y-1">
+                        <Link to="/shop" className="block px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl">
+                          All Categories
+                        </Link>
+                        {categories.slice(0, 8).map(cat => {
+                          const id = cat.catId || cat.categoryId;
+                          const name = cat.catTitle || cat.name;
+                          return (
+                            <Link key={id} to={`/shop?category=${id}`} className="block px-3 py-2 text-sm font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-600 rounded-xl">
+                              {name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <NavLink to="/shop?label=deals" className={({ isActive }) => `px-3.5 py-2 text-sm font-bold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'}`}>
+                  Deals
+                </NavLink>
+                <NavLink to="/shop?label=new" className={({ isActive }) => `px-3.5 py-2 text-sm font-bold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'}`}>
+                  New Arrivals
+                </NavLink>
+                <NavLink to="/about" className={({ isActive }) => `px-3.5 py-2 text-sm font-bold transition-colors ${isActive ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'}`}>
+                  About Us
+                </NavLink>
+              </nav>
+
+              {/* Search Bar Input */}
+              <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-xs lg:max-w-md mx-2 relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search for products..."
+                  className="w-full pl-4 pr-10 py-2.5 bg-slate-100/80 border border-slate-200/80 rounded-full text-sm font-medium text-slate-800 placeholder-slate-400 outline-none focus:bg-white focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all"
+                />
+                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-600">
+                  <Search className="w-4 h-4" />
+                </button>
+              </form>
+
+              {/* Right Action Icons */}
+              <div className="flex items-center gap-1.5 sm:gap-3">
+                {/* Mobile Search Button */}
+                <button onClick={() => setSearchOpen(true)} className="md:hidden p-2.5 rounded-full hover:bg-slate-100 text-slate-700">
+                  <Search className="w-5 h-5" />
+                </button>
+
+                {/* Wishlist Icon */}
+                <Link to="/wishlist" className="relative p-2.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
+                  <Heart className="w-5 h-5" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                      {wishlistCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Cart Icon */}
+                <button onClick={handleCartClick} className="relative p-2.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white">
+                      {cartCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* User Profile / Admin Link */}
                 {isLoggedIn ? (
-                  <>
-                    {(role === 'ADMIN' || role === 'admin') && (
-                      <Link to="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-blue-400 hover:bg-white/10 rounded-xl transition-colors">
-                        <LayoutDashboard className="w-4 h-4" /> Go to Dashboard
-                      </Link>
-                    )}
-                    <Link to="/orders" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-blue-100 hover:bg-white/10 hover:text-white rounded-xl transition-colors">
-                      <User className="w-4 h-4" /> My Orders
-                    </Link>
-                    <button onClick={handleLogout} className="flex w-full items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-400 hover:bg-white/10 rounded-xl transition-colors">
-                      <LogOut className="w-4 h-4" /> Logout
+                  <div className="relative group">
+                    <button className="flex items-center gap-2 p-1.5 rounded-full hover:bg-slate-100 transition-colors">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shadow-md shadow-blue-600/20">
+                        {(user?.firstName?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+                      </div>
                     </button>
-                  </>
+                    <div className="absolute right-0 top-full pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                      <div className="bg-white rounded-2xl shadow-xl border border-slate-100 py-2">
+                        <div className="px-4 py-2 border-b border-slate-100">
+                          <p className="text-xs font-bold text-slate-400">Signed in as</p>
+                          <p className="text-sm font-black text-slate-900 truncate">{user?.firstName || user?.username}</p>
+                        </div>
+                        <Link to="/my-orders" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                          <User className="w-4 h-4 text-slate-400" /> My Orders
+                        </Link>
+                        {(role === 'ADMIN' || role === 'admin') && (
+                          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                            <LayoutDashboard className="w-4 h-4 text-slate-400" /> Dashboard
+                          </Link>
+                        )}
+                        <div className="border-t border-slate-100 my-1" />
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                          <LogOut className="w-4 h-4 opacity-70" /> Logout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ) : (
-                  <Link to="/login" onClick={() => setMenuOpen(false)} className="block px-4 py-3.5 mt-2 bg-blue-600 text-white text-sm font-black rounded-xl text-center shadow-lg shadow-blue-900/50">
-                    Sign In to Account
+                  <Link to="/login" className="p-2.5 rounded-full hover:bg-slate-100 text-slate-700 transition-colors">
+                    <User className="w-5 h-5" />
                   </Link>
                 )}
+
+                {/* Mobile Menu Toggle */}
+                <button onClick={() => setMenuOpen(!menuOpen)} className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100">
+                  {menuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        {menuOpen && (
+          <div className="lg:hidden bg-white border-b border-slate-100 shadow-xl animate-in slide-in-from-top-2 duration-200">
+            <div className="px-4 py-4 space-y-2">
+              <NavLink to="/home" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl font-bold text-slate-800 hover:bg-slate-50">
+                Home
+              </NavLink>
+              <NavLink to="/shop" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl font-bold text-slate-800 hover:bg-slate-50">
+                Shop All
+              </NavLink>
+              <NavLink to="/shop?label=deals" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl font-bold text-slate-800 hover:bg-slate-50">
+                Deals
+              </NavLink>
+              <NavLink to="/shop?label=new" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl font-bold text-slate-800 hover:bg-slate-50">
+                New Arrivals
+              </NavLink>
+              <NavLink to="/about" onClick={() => setMenuOpen(false)} className="block px-4 py-2.5 rounded-xl font-bold text-slate-800 hover:bg-slate-50">
+                About Us
+              </NavLink>
             </div>
           </div>
         )}
       </header>
-      {/* Cart Sidebar Drawer */}
+
+      {/* Cart Drawer Overlay */}
       {cartSidebarOpen && (
         <div className="fixed inset-0 z-[200] flex justify-end">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setCartSidebarOpen(false)} />
           <div className="relative w-full sm:w-[400px] bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            {/* Header */}
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                <ShoppingCart className="w-6 h-6 text-blue-600" /> Your Cart
+                <ShoppingCart className="w-6 h-6 text-blue-600" /> Shopping Cart
               </h2>
               <button onClick={() => setCartSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-50 rounded-full text-slate-500 hover:bg-slate-200">
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               {cartLoading ? (
                 <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
@@ -319,40 +389,22 @@ const Navbar = () => {
                 <div className="text-center py-20">
                   <ShoppingBag className="w-16 h-16 text-slate-200 mx-auto mb-4" />
                   <p className="font-bold text-slate-800 text-lg mb-2">Cart is empty</p>
-                  <p className="text-slate-500 text-sm">Looks like you haven't added anything yet.</p>
+                  <p className="text-slate-500 text-sm">Discover products and add them to your cart.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cartItems.map((item) => {
-                    const price = item.productPrice ?? 0;
-                    const itemSubtotal = item.subtotal ?? (price * (item.qty ?? 1));
-                    const image = img(item.productImg || item.imageName || item.imageFile);
-                    const id = item.pId || item.productId;
-                    return (
-                      <div key={id} className="flex gap-4 group">
-                        <div className="w-20 h-20 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 border border-slate-100">
-                           {image ? <img src={image} className="w-full h-full object-cover" /> : <ShoppingBag className="w-8 h-8 text-slate-300 m-auto mt-6" />}
-                        </div>
-                        <div className="flex-1 flex flex-col min-w-0">
-                          <div className="flex justify-between items-start gap-2">
-                            <h4 className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug">{item.productTitle || item.title}</h4>
-                            <button onClick={() => handleRemoveItem(id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="mt-auto flex items-end justify-between">
-                            <p className="text-sm font-semibold text-slate-500">Qty: {item.qty}</p>
-                            <p className="font-black text-blue-600 text-sm">${itemSubtotal.toFixed(2)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {cartItems.map((item) => (
+                    <CartItem
+                      key={item.pId ?? item.productId ?? item.id}
+                      item={item}
+                      onDelete={handleRemoveItem}
+                      onQtyChange={handleQtyChange}
+                    />
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Footer */}
             {cartItems.length > 0 && (
               <div className="p-6 border-t border-slate-100 bg-slate-50">
                 <div className="flex justify-between mb-4">
@@ -362,11 +414,8 @@ const Navbar = () => {
                   </span>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <button onClick={() => { setCartSidebarOpen(false); navigate('/cart'); }} className="w-full py-4 bg-white text-blue-600 font-bold border border-blue-200 rounded-xl hover:bg-blue-50 transition-colors">
-                    View Full Cart
-                  </button>
-                  <button onClick={() => { setCartSidebarOpen(false); navigate('/cart'); }} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
-                    Checkout <ArrowRight className="w-4 h-4" />
+                  <button onClick={() => { setCartSidebarOpen(false); navigate('/cart'); }} className="w-full py-3.5 bg-blue-600 text-white font-black rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2">
+                    Checkout Now <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>

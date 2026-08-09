@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShoppingBag, Minus, Plus, X, Tag, ArrowRight, Loader2, ShoppingCart, Truck } from 'lucide-react';
-import { cartApi, couponApi, orderApi, fileUrl } from '../../services/api';
+import { couponApi, orderApi } from '../../services/api';
+import { useCart } from '../../context/CartContext';
 
 const BASE = 'http://localhost:9090/api/files/';
 const img  = (f) => (f ? `${BASE}${f}` : null);
 
 const Cart = () => {
-  const [items,   setItems]   = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { cartItems: items, updateQty, removeFromCart, clearCart, refreshCart } = useCart();
+  const [loading, setLoading] = useState(false);
   const [coupon,  setCoupon]  = useState('');
   const [discount, setDiscount] = useState(0);
   const [couponError, setCouponError] = useState('');
@@ -18,60 +19,43 @@ const Cart = () => {
   const navigate = useNavigate();
   const isLoggedIn = !!(localStorage.getItem('admin_token') || localStorage.getItem('customer_token'));
 
-  const load = () => {
-    if (!isLoggedIn) { setLoading(false); return; }
-    cartApi.get().then(r => setItems(r.data?.data || [])).catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
   const handleQty = async (productId, qty) => {
-    if (qty < 1) { handleRemove(productId); return; }
+    if (qty < 1) { removeFromCart(productId); return; }
     setUpdating(productId);
-    await cartApi.updateQty(productId, qty).catch(() => {});
-    setItems(prev => prev.map(i => i.productId === productId ? { ...i, qty } : i));
+    const item = items.find(i => (i.pId || i.pid || i.productId || i.id) === productId);
+    await updateQty(productId, qty, item?.productPrice);
     setUpdating(null);
   };
 
   const handleRemove = async (productId) => {
-    await cartApi.remove(productId).catch(() => {});
-    setItems(prev => prev.filter(i => (i.pId || i.productId) !== productId));
+    await removeFromCart(productId);
   };
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
     setPlacingOrder(true);
     try {
-      // Get the logged-in user info from localStorage (login stores it under 'user')
       const userStr = localStorage.getItem('user');
       const user = userStr ? JSON.parse(userStr) : null;
-      
-      // PlaceOrderRequest requires: customerId, dueAmount, qty, size, productId
-      // We'll use the first item to simplify for this flow, or the backend could handle multiple (usually)
-      // Standard flow: placeOrder creates a CustomerOrder and PendingOrder and returns it with invoiceNo
       const firstItem = items[0];
       const payload = {
         customerId: user?.id || null,
-        // backend expects an integer dueAmount (stored as Integer), round to nearest whole dollar
         dueAmount: Math.round(total),
         qty: firstItem.qty || 1,
         size: firstItem.size || 'M',
-        productId: firstItem.pId || firstItem.productId
+        productId: firstItem.pId || firstItem.pid || firstItem.productId || firstItem.id,
       };
-      
       const res = await orderApi.placeOrder(payload);
       if (res.data?.success) {
         const invoiceNo = res.data.data.invoiceNo;
+        clearCart(); // Reset cart badge to 0
         navigate(`/checkout/${invoiceNo}`);
       } else {
-        alert("Failed to place order: " + (res.data?.message || "Unknown error"));
+        alert('Failed to place order: ' + (res.data?.message || 'Unknown error'));
       }
     } catch (err) {
-      console.error("Checkout error:", err);
-      // Show server-provided message when available to aid debugging
-      const serverMsg = err?.response?.data?.message || err?.response?.data || err?.message;
-      alert("Error placing order: " + serverMsg);
+      const serverMsg = err?.response?.data?.message || err?.message;
+      alert('Error placing order: ' + serverMsg);
     } finally {
       setPlacingOrder(false);
     }
@@ -169,7 +153,7 @@ const Cart = () => {
                 {items.map((item, i) => {
                   const image  = img(item.productImg || item.imageName || item.imageFile);
                   const price  = item.productPrice ?? item.salePrice ?? item.price ?? 0;
-                  const id = item.pId || item.productId;
+                  const id = item.pId || item.pid || item.productId || item.id;
                   return (
                     <div key={id} className={`flex gap-5 p-5 ${i > 0 ? 'border-t border-slate-50' : ''} hover:bg-slate-50/50 transition-colors`}>
                       {/* Image */}

@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, QrCode, AlertCircle, Loader2, ArrowLeft, Building2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { BakongKHQR, khqrData, MerchantInfo } from 'bakong-khqr';
 import { paymentApi, orderApi } from '../services/api';
+import { useCart } from '../context/CartContext';
 
 const Checkout = () => {
   const { invoiceNo } = useParams();
+  const navigate = useNavigate();
+  const { clearCart } = useCart();
   const [qr, setQr] = useState(null);
   const [qrImage, setQrImage] = useState(null);
   const [status, setStatus] = useState('PENDING'); // PENDING | PAID
@@ -76,6 +79,8 @@ const Checkout = () => {
     try {
       await paymentApi.simulatePaid(transactionId);
       setStatus('PAID');
+      clearCart(); // Reset navbar cart badge
+      setTimeout(() => navigate(`/order-success/${invoiceNo}`), 1200);
     } catch (e) {
       console.error(e);
       alert("Simulation failed: " + (e.response?.data?.message || e.message));
@@ -118,8 +123,10 @@ const Checkout = () => {
             <div className="text-center animate-in zoom-in duration-500">
               <CheckCircle2 className="w-20 h-20 text-emerald-500 mx-auto mb-4" />
               <h2 className="text-2xl font-black text-slate-900">Payment Successful!</h2>
-              <p className="text-slate-500 mt-2">Check your Telegram bot for notification.</p>
-              <button onClick={() => window.location.reload()} className="mt-8 w-full py-4 bg-brand text-white font-black rounded-2xl shadow-lg hover:scale-[1.02] transition-all">Back to Store</button>
+              <p className="text-slate-500 mt-2">Redirecting to your order confirmation…</p>
+              <Link to={`/order-success/${invoiceNo}`} className="mt-8 w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                View Order Confirmation
+              </Link>
             </div>
           ) : errorMsg ? (
             <div className="text-center animate-in zoom-in duration-500 w-full">

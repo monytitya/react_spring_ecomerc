@@ -52,7 +52,10 @@ export const orderApi = {
   getCustomerOrders: (customerId) => api.get(`/orders/my/${customerId}`),
   placeOrder: (orderData) => api.post('/orders', orderData),
   getByInvoice: (invoiceNo) => api.get(`/orders/invoice/${invoiceNo}`),
+  cancelOrder: (id) => api.put(`/orders/admin/${id}/status`, { status: 'CANCELLED' }),
+  returnOrder: (id, reason) => api.put(`/orders/admin/${id}/status`, { status: 'RETURNED', reason }),
 };
+
 
 
 export const productApi = {

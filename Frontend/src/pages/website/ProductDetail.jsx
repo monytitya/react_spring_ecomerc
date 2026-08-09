@@ -4,7 +4,8 @@ import {
   ShoppingBag, Heart, Star, Truck, Shield, ArrowLeft, Minus, Plus,
   Check, Share2, Loader2, ShoppingCart
 } from 'lucide-react';
-import { productApi, cartApi, wishlistApi } from '../../services/api';
+import { productApi, wishlistApi } from '../../services/api';
+import { useCart } from '../../context/CartContext';
 
 const BASE = 'http://localhost:9090/api/files/';
 const img  = (f) => (f ? `${BASE}${f}` : null);
@@ -14,6 +15,7 @@ const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const ProductDetail = () => {
   const { id }    = useParams();
   const navigate  = useNavigate();
+  const { addToCart } = useCart();
   const [product, setProduct]     = useState(null);
   const [related,  setRelated]    = useState([]);
   const [loading,  setLoading]    = useState(true);
@@ -53,19 +55,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = async () => {
     if (!isLoggedIn) { navigate('/login'); return; }
-    try {
-      await cartApi.add({
-        pid: product.productId,
-        pId: product.productId,
-        PId: product.productId,
-        p_id: product.productId,
-        productId: product.productId,
-        qty,
-        size
-      });
+    const ok = await addToCart(product, qty);
+    if (ok) {
       setAdded(true);
       setTimeout(() => setAdded(false), 2500);
-    } catch { navigate('/login'); }
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleWishlist = async () => {

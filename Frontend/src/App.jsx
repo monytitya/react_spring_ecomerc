@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { CartProvider } from './context/CartContext';
 
 /* ─── Admin / Dashboard ─── */
 import AdminLayout    from './components/AdminLayout';
@@ -28,6 +29,9 @@ import Cart           from './pages/website/Cart';
 import Wishlist       from './pages/website/Wishlist';
 import About          from './pages/website/About';
 import Contact        from './pages/website/Contact';
+import OrderSuccess   from './pages/website/OrderSuccess';
+import MyOrders       from './pages/website/MyOrders';
+import OrderDetail    from './pages/website/OrderDetail';
 
 /* Smart root redirect */
 const RootRedirect = () => {
@@ -44,45 +48,50 @@ const RootRedirect = () => {
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* Root redirect */}
-        <Route path="/" element={<RootRedirect />} />
+      <CartProvider>
+        <Routes>
+          {/* Root redirect */}
+          <Route path="/" element={<RootRedirect />} />
 
-        {/* ══════════════ Public Website ══════════════ */}
-        <Route element={<WebsiteLayout />}>
-          <Route path="/home"            element={<Home />} />
-          <Route path="/shop"            element={<Shop />} />
-          <Route path="/product/:id"     element={<ProductDetail />} />
-          <Route path="/cart"            element={<Cart />} />
-          <Route path="/wishlist"        element={<Wishlist />} />
-          <Route path="/about"           element={<About />} />
-          <Route path="/contact"         element={<Contact />} />
-        </Route>
+          {/* ══════════════ Public Website ══════════════ */}
+          <Route element={<WebsiteLayout />}>
+            <Route path="/home"            element={<Home />} />
+            <Route path="/shop"            element={<Shop />} />
+            <Route path="/product/:id"     element={<ProductDetail />} />
+            <Route path="/cart"            element={<Cart />} />
+            <Route path="/wishlist"        element={<Wishlist />} />
+            <Route path="/about"           element={<About />} />
+            <Route path="/contact"         element={<Contact />} />
+            <Route path="/my-orders"       element={<MyOrders />} />
+            <Route path="/order-success/:invoiceNo" element={<OrderSuccess />} />
+            <Route path="/order/:invoiceNo"         element={<OrderDetail />} />
+          </Route>
 
-        {/* ══════════════ Auth pages ══════════════ */}
-        <Route path="/login"                   element={<Login />} />
-        <Route path="/register"                element={<Register />} />
-        <Route path="/oauth2/callback"         element={<OAuth2Callback />} />
-        <Route path="/checkout/:invoiceNo"     element={<Checkout />} />
+          {/* ══════════════ Auth pages ══════════════ */}
+          <Route path="/login"                   element={<Login />} />
+          <Route path="/register"                element={<Register />} />
+          <Route path="/oauth2/callback"         element={<OAuth2Callback />} />
+          <Route path="/checkout/:invoiceNo"     element={<Checkout />} />
 
-        {/* ══════════════ Protected Dashboard ══════════════ */}
-        <Route path="/" element={<AdminLayout />}>
-          <Route path="dashboard"  element={<Dashboard />} />
-          <Route path="analytics"  element={<Analytics />} />
-          <Route path="customers"  element={<Customers />} />
-          <Route path="orders"     element={<Orders />} />
-          <Route path="products"   element={<Products />} />
-          <Route path="invoices"   element={<Invoices />} />
-          <Route path="payments"   element={<Payments />} />
-          <Route path="coupons"    element={<Coupons />} />
-          <Route path="catalog"    element={<Catalog />} />
-          <Route path="cms"        element={<CMS />} />
-          <Route path="settings"   element={<Settings />} />
-        </Route>
+          {/* ══════════════ Protected Dashboard ══════════════ */}
+          <Route path="/" element={<AdminLayout />}>
+            <Route path="dashboard"  element={<Dashboard />} />
+            <Route path="analytics"  element={<Analytics />} />
+            <Route path="customers"  element={<Customers />} />
+            <Route path="orders"     element={<Orders />} />
+            <Route path="products"   element={<Products />} />
+            <Route path="invoices"   element={<Invoices />} />
+            <Route path="payments"   element={<Payments />} />
+            <Route path="coupons"    element={<Coupons />} />
+            <Route path="catalog"    element={<Catalog />} />
+            <Route path="cms"        element={<CMS />} />
+            <Route path="settings"   element={<Settings />} />
+          </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/home" replace />} />
-      </Routes>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+      </CartProvider>
     </Router>
   );
 }
