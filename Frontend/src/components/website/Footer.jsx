@@ -74,7 +74,7 @@ const Footer = () => {
               <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/30">
                 <span className="text-white font-black text-xl">A</span>
               </div>
-              <span className="text-2xl font-black text-white tracking-tight">Accesora</span>
+              <span className="text-2xl font-black text-white tracking-tight">Ecomerc shop</span>
             </Link>
             <p className="text-sm leading-relaxed mb-6 max-w-xs text-slate-400">
               Premium accessories designed for work, travel and lifestyle. Experience high quality gear with fast worldwide delivery.
@@ -117,7 +117,7 @@ const Footer = () => {
 
         {/* Bottom Bar */}
         <div className="border-t border-slate-800/80 mt-14 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-slate-500">© {year} Accesora Inc. All rights reserved.</p>
+          <p className="text-xs text-slate-500">© {year} Ecomerc shop. All rights reserved.</p>
           <div className="flex items-center gap-3">
             {socials.map(({ icon: Icon, href, label }) => (
               <a

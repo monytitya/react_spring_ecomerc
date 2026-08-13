@@ -23,11 +23,6 @@ const categoryIcons = {
 const HERO_SLIDES = [
   {
     id: 1,
-    image: '/assets/banners/media__1786293352384.png',
-    link: '/shop?label=deals'
-  },
-  {
-    id: 2,
     image: '/assets/banners/media__1786293334428.png',
     link: '/shop?label=new'
   }
@@ -38,7 +33,7 @@ const HeroSwiper = ({ navigate }) => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % HERO_SLIDES.length);
+      setCurrentSlide(prev => (prev + 0) % HERO_SLIDES.length);
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -266,12 +261,10 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-slate-50/50 pt-24 sm:pt-28">
-      {/* ─── 1. HERO BANNER SECTION WITH SWIPER SLIDER ─── */}
       <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-12">
         <HeroSwiper navigate={navigate} />
       </section>
 
-      {/* ─── 2. VALUE PROPOSITIONS BAR ─── */}
       <section className="px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto mb-16">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           <div className="flex items-center gap-4 p-3">

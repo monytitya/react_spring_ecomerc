@@ -28,9 +28,14 @@ public class OrderService {
     @Transactional
     public OrderModel placeOrder(PlaceOrderRequest request, String ipAddress) {
         long invoiceNo = Math.abs(new Random().nextLong() % 2_000_000_000L);
+        // If provided customerId does not exist in DB, treat as guest order (avoid FK violation)
+        Integer customerId = request.getCustomerId();
+        if (customerId != null && !customerRepository.existsById(customerId)) {
+            customerId = null;
+        }
 
         CustomerOrder order = CustomerOrder.builder()
-                .customerId(request.getCustomerId())
+                .customerId(customerId)
                 .dueAmount(request.getDueAmount())
                 .invoiceNo(invoiceNo)
                 .qty(request.getQty())

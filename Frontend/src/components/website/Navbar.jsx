@@ -178,25 +178,7 @@ const Navbar = () => {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
-        {/* Top Announcement Bar */}
-        <div className="bg-[#050B14] text-white text-xs py-2 px-4 border-b border-slate-800/80">
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-2 font-medium text-slate-300">
-              <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400 animate-pulse" />
-              <span>Summer Sale is Live! Get Up to 60% OFF on Selected Items</span>
-              <Link to="/shop?label=sale" className="text-blue-400 font-bold hover:underline ml-1 flex items-center gap-0.5">
-                Shop Now <ArrowRight className="w-3 h-3 inline" />
-              </Link>
-            </div>
-            <div className="hidden md:flex items-center gap-6 text-slate-300 font-medium">
-              <span className="flex items-center gap-1.5">
-                <Truck className="w-3.5 h-3.5 text-blue-400" /> Free Shipping on orders over $99
-              </span>
-              <span className="text-slate-600">|</span>
-              <Link to="/contact" className="hover:text-white transition-colors">Help Center</Link>
-            </div>
-          </div>
-        </div>
+        {/* Top announcement removed */}
 
         {/* Main Navbar */}
         <div className={`bg-white transition-shadow duration-300 border-b border-slate-100 ${scrolled ? 'shadow-md shadow-slate-200/50' : ''}`}>
