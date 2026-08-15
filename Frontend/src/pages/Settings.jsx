@@ -83,6 +83,8 @@ const Settings = () => {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setStored(updatedUser);
       setProfile(prev => ({ ...prev, image: newImage }));
+      setAvatarPreview(null);
+      setAvatarFile(null);
       
       showToast('Profile updated successfully!');
       // Force a slight delay to allow image propagation

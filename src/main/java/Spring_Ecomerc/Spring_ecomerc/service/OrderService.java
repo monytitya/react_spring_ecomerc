@@ -46,7 +46,7 @@ public class OrderService {
         customerOrderRepository.save(order);
 
         PendingOrder pendingOrder = PendingOrder.builder()
-                .customerId(request.getCustomerId())
+                .customerId(customerId)
                 .invoiceNo(invoiceNo)
                 .productId(request.getProductId())
                 .qty(request.getQty())
@@ -59,8 +59,11 @@ public class OrderService {
 
         // New Idea: Instant Telegram Alert
         try {
-            String customerName = customerRepository.findById(request.getCustomerId())
-                    .map(c -> c.getCustomerName()).orElse("Guest");
+            String customerName = customerId == null
+                    ? "Guest"
+                    : customerRepository.findById(customerId)
+                            .map(c -> c.getCustomerName())
+                            .orElse("Guest");
             String productTitle = productRepository.findById(request.getProductId())
                     .map(p -> p.getProductTitle()).orElse("Product #" + request.getProductId());
 

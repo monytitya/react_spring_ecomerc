@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,19 +18,36 @@ public class CartService {
     private final ProductRepository productRepository;
 
     public List<CartModel> getCartByIp(String ipAddress) {
-        return cartRepository.findByIpAdd(ipAddress).stream().map(this::mapToModel).collect(Collectors.toList());
+        return cartRepository.findByIpAdd(ipAddress).stream()
+                .map(this::mapToModel)
+                .toList();
     }
 
+    @Transactional
     public CartModel addToCart(Cart cart) {
+        int quantityToAdd = cart.getQty() == null ? 1 : cart.getQty();
+        if (quantityToAdd < 1) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
+        }
+
         return cartRepository.findByProductIdAndIpAdd(cart.getProductId(), cart.getIpAdd())
                 .map(existing -> {
-                    existing.setQty(existing.getQty() + cart.getQty());
+                    int existingQuantity = existing.getQty() == null ? 0 : existing.getQty();
+                    existing.setQty(existingQuantity + quantityToAdd);
                     return mapToModel(cartRepository.save(existing));
                 })
-                .orElseGet(() -> mapToModel(cartRepository.save(cart)));
+                .orElseGet(() -> {
+                    cart.setQty(quantityToAdd);
+                    return mapToModel(cartRepository.save(cart));
+                });
     }
 
+    @Transactional
     public CartModel updateQuantity(Integer productId, Integer qty, String ipAddress) {
+        if (qty == null || qty < 1) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
+        }
+
         Cart cart = cartRepository.findByProductIdAndIpAdd(productId, ipAddress)
                 .orElseThrow(() -> new RuntimeException("Cart item not found"));
         cart.setQty(qty);
@@ -44,20 +60,21 @@ public class CartService {
         model.setQty(cart.getQty());
         model.setSize(cart.getSize());
         model.setIpAdd(cart.getIpAdd());
+        productRepository.findById(cart.getProductId()).ifPresent(product -> {
+            model.setProductTitle(product.getProductTitle());
+            model.setProductImg(product.getProductImg());
 
-        productRepository.findById(cart.getProductId()).ifPresent(p -> {
-            model.setProductTitle(p.getProductTitle());
-            model.setProductImg(p.getProductImg());
-            Integer price = (p.getProductPrice() != null && p.getProductPrice() > 0)
-                    ? p.getProductPrice()
-                    : (p.getProductPspPrice() != null ? p.getProductPspPrice() : 0);
+            double price = product.getProductPrice() != null && product.getProductPrice() > 0
+                    ? product.getProductPrice()
+                    : product.getProductPspPrice() != null ? product.getProductPspPrice() : 0;
+            int quantity = cart.getQty() == null ? 1 : cart.getQty();
+
             model.setProductPrice(price);
-            model.setSubtotal(price * (cart.getQty() != null ? cart.getQty() : 1));
+            model.setSubtotal(price * quantity);
         });
 
         return model;
     }
-
     @Transactional
     public void removeFromCart(Integer productId, String ipAddress) {
         cartRepository.deleteByProductIdAndIp(productId, ipAddress);

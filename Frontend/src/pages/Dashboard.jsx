@@ -165,7 +165,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">${product.productPrice}</p>
+                  <p className="text-sm font-bold text-slate-900">${(product.productPrice || 0).toFixed(2)}</p>
                 </div>
               </div>
             ))}

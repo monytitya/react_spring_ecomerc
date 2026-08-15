@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,9 +18,12 @@ public class WishlistService {
     private final ProductRepository productRepository;
 
     public List<WishlistModel> getWishlistByCustomer(Integer customerId) {
-        return wishlistRepository.findByCustomerId(customerId).stream().map(this::mapToModel).collect(Collectors.toList());
+        return wishlistRepository.findByCustomerId(customerId).stream()
+                .map(this::mapToModel)
+                .toList();
     }
 
+    @Transactional
     public WishlistModel addToWishlist(Integer customerId, Integer productId) {
         var existing = wishlistRepository.findByCustomerIdAndProductId(customerId, productId);
         if (existing.isPresent()) {

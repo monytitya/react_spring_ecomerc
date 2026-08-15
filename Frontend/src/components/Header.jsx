@@ -15,8 +15,18 @@ const Header = () => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [lang, setLang] = React.useState('EN');
+  const [user, setUser] = React.useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      const updatedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      setUser(updatedUser);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const displayName = user.name || user.adminName || 'Admin User';
   const profileImg = user.image || user.adminImage;
 

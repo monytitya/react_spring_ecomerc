@@ -10,9 +10,9 @@ public class CartModel {
     private Integer pId;
     private String productTitle;
     private String productImg;
-    private Integer productPrice;
+    private Double productPrice;
     private Integer qty;
     private String size;
     private String ipAdd;
-    private Integer subtotal;
+    private Double subtotal;
 }

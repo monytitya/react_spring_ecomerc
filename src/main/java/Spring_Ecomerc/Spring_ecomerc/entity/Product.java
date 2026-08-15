@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class Product {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_id")
@@ -40,10 +39,10 @@ public class Product {
 
 
     @Column(name = "product_price")
-    private Integer productPrice;
+    private Double productPrice;
 
     @Column(name = "product_psp_price")
-    private Integer productPspPrice;
+    private Double productPspPrice;
 
     @Column(name = "product_desc", columnDefinition = "TEXT")
     private String productDesc;

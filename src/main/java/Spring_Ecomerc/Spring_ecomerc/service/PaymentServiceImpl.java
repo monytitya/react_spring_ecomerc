@@ -46,6 +46,10 @@ public class PaymentServiceImpl implements PaymentService {
         if (request.getAmount() == null || request.getAmount() <= 0) {
             throw new RuntimeException("Invalid payment amount");
         }
+        if (merchantId == null || merchantId.isBlank() || merchantId.startsWith("dev_bakong@")) {
+            throw new IllegalStateException(
+                    "KHQR merchant account is not configured. Set KHQR_MERCHANT_ID to your active Bakong account ID.");
+        }
 
         // Check for existing pending payment for this order
         return paymentRepository.findByOrderId(request.getOrderId()).stream()
@@ -90,6 +94,11 @@ public class PaymentServiceImpl implements PaymentService {
                         String.valueOf(payment.getOrderId())
                 );
                 
+                // Log QR generation for debugging
+                System.out.println("KHQR Generated for Order: " + payment.getOrderId() + 
+                    " | Amount: " + payment.getAmount() + 
+                    " | Merchant: " + merchantId);
+                
                 if (payment.getMd5() == null) {
                     byte[] md5Bytes = java.security.MessageDigest.getInstance("MD5")
                             .digest(qrString.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -100,7 +109,9 @@ public class PaymentServiceImpl implements PaymentService {
                 response.setQrString(qrString);
                 response.setQrImage(khqrService.generateQRCodeBase64(qrString));
             } catch (Exception e) {
-                // Log error
+                System.err.println("Error generating KHQR: " + e.getMessage());
+                e.printStackTrace();
+                // Log error but don't fail - return response without QR
             }
         }
         return response;
@@ -109,12 +120,24 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse processWebhook(BakongWebhookRequest request) {
+        if (request.getTransactionId() == null || request.getTransactionId().isEmpty()) {
+            System.err.println("Invalid webhook request: missing transaction ID");
+            throw new RuntimeException("Transaction ID is required");
+        }
+        
         Payment payment = paymentRepository.findByTransactionId(request.getTransactionId())
-                .orElseThrow(() -> new RuntimeException("Transaction not found: " + request.getTransactionId()));
+                .orElseThrow(() -> {
+                    System.err.println("Transaction not found: " + request.getTransactionId());
+                    return new RuntimeException("Transaction not found: " + request.getTransactionId());
+                });
 
         if (payment.getStatus() == PaymentStatus.PENDING) {
             payment.setStatus(PaymentStatus.PAID);
             paymentRepository.save(payment);
+
+            System.out.println("Payment confirmed for Transaction: " + payment.getTransactionId() + 
+                " | Order: " + payment.getOrderId() + 
+                " | Amount: " + payment.getAmount());
 
             // Update CustomerOrder Status
             customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
@@ -137,6 +160,8 @@ public class PaymentServiceImpl implements PaymentService {
                     payment.getAmount(),
                     "Bakong KHQR"
             );
+        } else {
+            System.out.println("Payment already processed: " + payment.getTransactionId());
         }
 
         return mapToResponse(payment);

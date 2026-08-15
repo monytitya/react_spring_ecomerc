@@ -13,8 +13,8 @@ public class ProductModel {
     private String productUrl;
     private String productImg;
 
-    private Integer productPrice;
-    private Integer productPspPrice;
+    private Double productPrice;
+    private Double productPspPrice;
     private String productDesc;
     private String productFeatures;
     private String productVideo;

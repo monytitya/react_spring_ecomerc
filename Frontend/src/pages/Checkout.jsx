@@ -12,13 +12,15 @@ const Checkout = () => {
   const { clearCart } = useCart();
   const [qr, setQr] = useState(null);
   const [qrImage, setQrImage] = useState(null);
-  const [status, setStatus] = useState('PENDING'); // PENDING | PAID
+  const [status, setStatus] = useState('PENDING'); // PENDING | PAID | FAILED
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
   const [amount, setAmount] = useState(0);
   const [orderData, setOrderData] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [pollCount, setPollCount] = useState(0);
+  const maxPollAttempts = 120; // 10 minutes (120 * 5 seconds)
 
   const initPayment = async () => {
     try {
@@ -64,9 +66,21 @@ const Checkout = () => {
       const res = await paymentApi.getStatus(transactionId);
       if (res.data.data?.status === 'PAID') {
         setStatus('PAID');
+        setPollCount(0);
+      } else {
+        setPollCount(prev => {
+          const newCount = prev + 1;
+          if (newCount >= maxPollAttempts) {
+            setErrorMsg('Payment confirmation timeout. Please try again or contact support.');
+            setStatus('FAILED');
+            return newCount;
+          }
+          return newCount;
+        });
       }
     } catch (e) {
       console.error("Status check failed", e);
+      setPollCount(prev => prev + 1);
     }
   };
 
@@ -97,11 +111,11 @@ const Checkout = () => {
 
   useEffect(() => {
     let timer;
-    if (transactionId && status !== 'PAID') {
+    if (transactionId && status === 'PENDING' && pollCount < maxPollAttempts) {
       timer = setInterval(pollStatus, 5000); // Polling every 5 seconds
     }
     return () => clearInterval(timer);
-  }, [transactionId, status]);
+  }, [transactionId, status, pollCount]);
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand" /></div>;
 
@@ -127,6 +141,15 @@ const Checkout = () => {
               <Link to={`/order-success/${invoiceNo}`} className="mt-8 w-full py-4 bg-blue-600 text-white font-black rounded-2xl shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
                 View Order Confirmation
               </Link>
+            </div>
+          ) : status === 'FAILED' ? (
+            <div className="text-center animate-in zoom-in duration-500 w-full">
+              <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-black text-slate-900">Payment Timeout</h2>
+              <p className="text-red-500 text-sm mt-2 p-4 bg-red-50 rounded-xl border border-red-100">
+                {errorMsg || 'Payment confirmation took too long. Please try again.'}
+              </p>
+              <button onClick={() => window.location.reload()} className="mt-6 w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-all">Try Again</button>
             </div>
           ) : errorMsg ? (
             <div className="text-center animate-in zoom-in duration-500 w-full">
@@ -160,13 +183,21 @@ const Checkout = () => {
               <div className="space-y-4 w-full">
                 <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-100 rounded-2xl">
                   <QrCode className="w-5 h-5 text-brand mt-0.5" />
-                  <p className="text-xs text-blue-700 font-medium">Scan the QR code with your <b>ABA</b> or <b>Wing Bank</b> app to pay instantly.</p>
+                  <div>
+                    <p className="text-xs text-blue-700 font-bold mb-1">Scan with your bank app:</p>
+                    <p className="text-xs text-blue-700">ACleda Bank • ABA Bank • Wing Bank • Other KHQR supported banks</p>
+                  </div>
                 </div>
 
                 <div className="h-1 bg-slate-100 rounded-full w-full overflow-hidden">
-                  <div className="h-full bg-brand animate-progress origin-left"></div>
+                  <div 
+                    className="h-full bg-brand transition-all duration-300"
+                    style={{width: `${Math.min((pollCount / maxPollAttempts) * 100, 100)}%`}}
+                  ></div>
                 </div>
-                <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">Waiting for bank confirmation...</p>
+                <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                  {pollCount > 0 ? `Waiting... (${Math.ceil((maxPollAttempts - pollCount) * 5 / 60)}m remaining)` : 'Waiting for bank confirmation...'}
+                </p>
 
                 <button
                   onClick={simulateSuccess}
@@ -174,7 +205,7 @@ const Checkout = () => {
                   className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center disabled:opacity-50"
                 >
                   {simulating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                  [SIMULATE] Customer Scan & Pay
+                  [TEST] Simulate Payment Success
                 </button>
               </div>
             </>
@@ -185,17 +216,6 @@ const Checkout = () => {
       <p className="mt-8 text-xs text-slate-400 font-medium flex items-center">
         <AlertCircle className="w-3 h-3 mr-1.5" /> Secure payment powered by Blueberry CRM
       </p>
-
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes progress {
-          0% { transform: scaleX(0); }
-          100% { transform: scaleX(1); }
-        }
-        .animate-progress {
-          animation: progress 3s infinite ease-in-out;
-        }
-      `}} />
     </div>
   );
 };

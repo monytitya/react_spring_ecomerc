@@ -12,6 +12,8 @@ import java.util.Base64;
 @Service
 public class KHQRService {
 
+    private static final long QR_EXPIRY_MILLIS = 10 * 60 * 1000L;
+
     public String generateKHQRString(String merchantId, String merchantName, String merchantCity, String amount,
             String currency,
             String orderId) {
@@ -21,9 +23,10 @@ public class KHQRService {
 
         khqr.append(formatTag("01", "12"));
 
-        String bakongInfo = formatTag("00", "kh.com.bakong") +
-                formatTag("01", merchantId);
-        khqr.append(formatTag("29", bakongInfo));
+        // Tag 29 is the KHQR individual account-information template. The
+        // account ID is a Bakong alias such as merchant@bank. Merchant QR
+        // details must not be placed in this template.
+        khqr.append(formatTag("29", formatTag("00", merchantId)));
 
         khqr.append(formatTag("52", "5999"));
 
@@ -40,6 +43,13 @@ public class KHQRService {
 
         String additionalData = formatTag("01", orderId);
         khqr.append(formatTag("62", additionalData));
+
+        // A QR containing an amount is dynamic (01 = 12), and KHQR requires
+        // both creation and expiry timestamps for dynamic QR codes.
+        long createdAt = System.currentTimeMillis();
+        String timestamps = formatTag("00", Long.toString(createdAt))
+                + formatTag("01", Long.toString(createdAt + QR_EXPIRY_MILLIS));
+        khqr.append(formatTag("99", timestamps));
 
         khqr.append("6304");
         String crc = calculateCRC16(khqr.toString());
