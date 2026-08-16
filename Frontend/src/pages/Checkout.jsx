@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, QrCode, AlertCircle, Loader2, ArrowLeft, Building2 } from 'lucide-react';
+import { CheckCircle2, QrCode, AlertCircle, Loader2, ArrowLeft, Building2, DollarSign } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { BakongKHQR, khqrData, MerchantInfo } from 'bakong-khqr';
 import { paymentApi, orderApi } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { PAYMENT_CONSTANTS } from '../config/constants';
 
 const Checkout = () => {
   const { invoiceNo } = useParams();
@@ -14,7 +14,6 @@ const Checkout = () => {
   const [qrImage, setQrImage] = useState(null);
   const [status, setStatus] = useState('PENDING'); // PENDING | PAID | FAILED
   const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(false);
   const [transactionId, setTransactionId] = useState(null);
   const [amount, setAmount] = useState(0);
   const [orderData, setOrderData] = useState(null);
@@ -31,7 +30,22 @@ const Checkout = () => {
 
       const order = orderRes.data.data;
       setOrderData(order);
-      const actualAmount = order.dueAmount || 0;
+      
+      // Validate and convert amount to Double - must be >= 0.01
+      const actualAmount = order.dueAmount ? parseFloat(order.dueAmount) : null;
+      
+      if (!actualAmount || actualAmount <= 0) {
+        throw new Error(
+          `Invalid order amount. Orders must be at least $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} to proceed with payment.`
+        );
+      }
+      
+      if (actualAmount < PAYMENT_CONSTANTS.MIN_AMOUNT_USD) {
+        throw new Error(
+          `Order amount is too low. Minimum payment amount is $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} USD (or ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel).`
+        );
+      }
+      
       setAmount(actualAmount);
 
       // 2. Create/fetch a payment record in the backend
@@ -84,25 +98,6 @@ const Checkout = () => {
     }
   };
 
-  const simulateSuccess = async () => {
-    if (!transactionId) {
-      alert("Transaction ID is missing. Cannot simulate.");
-      return;
-    }
-    setSimulating(true);
-    try {
-      await paymentApi.simulatePaid(transactionId);
-      setStatus('PAID');
-      clearCart(); // Reset navbar cart badge
-      setTimeout(() => navigate(`/order-success/${invoiceNo}`), 1200);
-    } catch (e) {
-      console.error(e);
-      alert("Simulation failed: " + (e.response?.data?.message || e.message));
-    } finally {
-      setSimulating(false);
-    }
-  };
-
   useEffect(() => {
     if (invoiceNo) {
       initPayment();
@@ -116,6 +111,13 @@ const Checkout = () => {
     }
     return () => clearInterval(timer);
   }, [transactionId, status, pollCount]);
+
+  useEffect(() => {
+    if (status !== 'PAID') return;
+    clearCart();
+    const redirectTimer = setTimeout(() => navigate(`/order-success/${invoiceNo}`), 1200);
+    return () => clearTimeout(redirectTimer);
+  }, [status, clearCart, invoiceNo, navigate]);
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-10 h-10 animate-spin text-brand" /></div>;
 
@@ -155,7 +157,18 @@ const Checkout = () => {
             <div className="text-center animate-in zoom-in duration-500 w-full">
               <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-black text-slate-900">Payment Error</h2>
-              <p className="text-red-500 text-sm mt-2 p-4 bg-red-50 rounded-xl border border-red-100">{errorMsg}</p>
+              <div className="text-red-500 text-sm mt-4 p-4 bg-red-50 rounded-xl border border-red-200 space-y-3">
+                <p className="font-medium">{errorMsg}</p>
+                <div className="pt-3 border-t border-red-200 text-xs">
+                  <p className="font-semibold text-red-700 mb-2">💡 Minimum Payment Requirement:</p>
+                  <p className="text-red-600">
+                    • Minimum: <span className="font-black">${PAYMENT_CONSTANTS.MIN_AMOUNT_USD}</span> USD
+                  </p>
+                  <p className="text-red-600">
+                    • Or: <span className="font-black">{PAYMENT_CONSTANTS.MIN_AMOUNT_KHR}</span> Riel (KHR)
+                  </p>
+                </div>
+              </div>
               <button onClick={() => window.location.reload()} className="mt-6 w-full py-3 bg-slate-900 text-white font-bold rounded-xl shadow-lg hover:scale-[1.02] transition-all">Try Again</button>
             </div>
           ) : (
@@ -165,6 +178,10 @@ const Checkout = () => {
                 <h2 className="text-3xl font-black text-slate-900 mt-1">
                   {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)}
                 </h2>
+                <p className="text-xs text-slate-400 mt-2 flex items-center justify-center gap-1">
+                  <DollarSign className="w-3.5 h-3.5" />
+                  Minimum payment: ${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} / {PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel
+                </p>
               </div>
 
               <div className="relative p-6 bg-slate-50 rounded-3xl border-2 border-brand/10 mb-8 w-full flex justify-center">
@@ -199,14 +216,6 @@ const Checkout = () => {
                   {pollCount > 0 ? `Waiting... (${Math.ceil((maxPollAttempts - pollCount) * 5 / 60)}m remaining)` : 'Waiting for bank confirmation...'}
                 </p>
 
-                <button
-                  onClick={simulateSuccess}
-                  disabled={simulating || !transactionId}
-                  className="mt-4 w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 hover:text-brand hover:border-brand/40 font-bold rounded-2xl text-sm transition-all flex items-center justify-center disabled:opacity-50"
-                >
-                  {simulating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                  [TEST] Simulate Payment Success
-                </button>
               </div>
             </>
           )}

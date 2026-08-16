@@ -25,6 +25,12 @@ public class Payment {
     @Column(name = "md5")
     private String md5;
 
+    @Column(name = "khqr_payload", length = 2048)
+    private String khqrPayload;
+
+    @Column(name = "qr_expires_at")
+    private LocalDateTime qrExpiresAt;
+
     @Column(name = "amount")
     private Double amount;
 

@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -27,6 +29,10 @@ public class PaymentServiceImpl implements PaymentService {
     private final KHQRService khqrService;
     private final CustomerOrderRepository customerOrderRepository;
     private final PendingOrderRepository pendingOrderRepository;
+
+    // Payment amount constants
+    private static final Double MIN_PAYMENT_AMOUNT_USD = 0.01;
+    private static final Integer MIN_PAYMENT_AMOUNT_KHR = 100;
 
     @Value("${payment.khqr.merchant-id}")
     private String merchantId;
@@ -43,12 +49,32 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse createPayment(PaymentCreateRequest request) {
-        if (request.getAmount() == null || request.getAmount() <= 0) {
-            throw new RuntimeException("Invalid payment amount");
+        // Validate orderId
+        if (request.getOrderId() == null || request.getOrderId() <= 0) {
+            throw new RuntimeException("Invalid order ID. Order ID must be a positive number.");
         }
-        if (merchantId == null || merchantId.isBlank() || merchantId.startsWith("dev_bakong@")) {
+        
+        // Validate amount - must be a positive number and meet minimum requirement
+        if (request.getAmount() == null || request.getAmount() <= 0) {
+            throw new RuntimeException(
+                "Invalid payment amount: " + request.getAmount() + 
+                ". Amount must be greater than 0 for order #" + request.getOrderId() + 
+                ". Please ensure the order has a valid total amount."
+            );
+        }
+        
+        // Validate minimum payment amount (0.01 USD / 100 Riel)
+        if (request.getAmount() < MIN_PAYMENT_AMOUNT_USD) {
+            throw new RuntimeException(
+                "Payment amount too low: $" + String.format("%.2f", request.getAmount()) + 
+                ". Minimum payment amount is $" + MIN_PAYMENT_AMOUNT_USD + " USD (or " + MIN_PAYMENT_AMOUNT_KHR + " Riel). " +
+                "Order #" + request.getOrderId()
+            );
+        }
+        
+        if (!isConfiguredBakongAccount(merchantId)) {
             throw new IllegalStateException(
-                    "KHQR merchant account is not configured. Set KHQR_MERCHANT_ID to your active Bakong account ID.");
+                    "KHQR receiving account is not configured. Set KHQR_MERCHANT_ID to an active Bakong account ID, for example store@bank.");
         }
 
         // Check for existing pending payment for this order
@@ -74,9 +100,14 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
     public PaymentResponse getPaymentStatus(String transactionId) {
         Payment payment = paymentRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new RuntimeException("Payment not found with transaction ID: " + transactionId));
+
+        if (payment.getStatus() == PaymentStatus.PENDING) {
+            checkPaymentWithBakong(payment);
+        }
         
         return getPaymentResponseWithQR(payment);
     }
@@ -85,29 +116,27 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentResponse response = mapToResponse(payment);
         if (payment.getStatus() == PaymentStatus.PENDING) {
             try {
-                String qrString = khqrService.generateKHQRString(
-                        merchantId,
-                        merchantName,
-                        merchantCity,
-                        String.format("%.2f", payment.getAmount()),
-                        payment.getCurrency(),
-                        String.valueOf(payment.getOrderId())
-                );
-                
-                // Log QR generation for debugging
-                System.out.println("KHQR Generated for Order: " + payment.getOrderId() + 
-                    " | Amount: " + payment.getAmount() + 
-                    " | Merchant: " + merchantId);
-                
-                if (payment.getMd5() == null) {
+                if (payment.getKhqrPayload() == null || payment.getQrExpiresAt() == null
+                        || !payment.getQrExpiresAt().isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
+                    String qrString = khqrService.generateKHQRString(
+                            merchantId,
+                            merchantName,
+                            merchantCity,
+                            String.format(Locale.ROOT, "%.2f", payment.getAmount()),
+                            payment.getCurrency(),
+                            String.valueOf(payment.getOrderId())
+                    );
+
                     byte[] md5Bytes = java.security.MessageDigest.getInstance("MD5")
                             .digest(qrString.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    payment.setKhqrPayload(qrString);
                     payment.setMd5(java.util.HexFormat.of().formatHex(md5Bytes));
+                    payment.setQrExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(10));
                     paymentRepository.save(payment);
                 }
 
-                response.setQrString(qrString);
-                response.setQrImage(khqrService.generateQRCodeBase64(qrString));
+                response.setQrString(payment.getKhqrPayload());
+                response.setQrImage(khqrService.generateQRCodeBase64(payment.getKhqrPayload()));
             } catch (Exception e) {
                 System.err.println("Error generating KHQR: " + e.getMessage());
                 e.printStackTrace();
@@ -131,38 +160,7 @@ public class PaymentServiceImpl implements PaymentService {
                     return new RuntimeException("Transaction not found: " + request.getTransactionId());
                 });
 
-        if (payment.getStatus() == PaymentStatus.PENDING) {
-            payment.setStatus(PaymentStatus.PAID);
-            paymentRepository.save(payment);
-
-            System.out.println("Payment confirmed for Transaction: " + payment.getTransactionId() + 
-                " | Order: " + payment.getOrderId() + 
-                " | Amount: " + payment.getAmount());
-
-            // Update CustomerOrder Status
-            customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
-                order.setOrderStatus("Complete");
-                customerOrderRepository.save(order);
-            });
-
-            // Update PendingOrder Status (if applicable)
-            pendingOrderRepository.findByInvoiceNo(
-                customerOrderRepository.findById(payment.getOrderId().intValue())
-                    .map(o -> o.getInvoiceNo()).orElse(0L)
-            ).forEach(po -> {
-                po.setOrderStatus("Paid");
-                pendingOrderRepository.save(po);
-            });
-
-            // Notify via Telegram
-            telegramService.sendPaymentNotification(
-                    String.valueOf(payment.getOrderId()),
-                    payment.getAmount(),
-                    "Bakong KHQR"
-            );
-        } else {
-            System.out.println("Payment already processed: " + payment.getTransactionId());
-        }
+        markAsPaid(payment, "Bakong KHQR");
 
         return mapToResponse(payment);
     }
@@ -186,59 +184,68 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
     }
 
+    private boolean isConfiguredBakongAccount(String accountId) {
+        if (accountId == null || accountId.isBlank()) {
+            return false;
+        }
+
+        String normalized = accountId.trim().toLowerCase(Locale.ROOT);
+        return normalized.matches("^[^@\\s]{1,32}@[a-z0-9][a-z0-9-]{1,31}$")
+                && !normalized.startsWith("dev_")
+                && !normalized.contains("example")
+                && !normalized.contains("dummy");
+    }
+
     @org.springframework.scheduling.annotation.Scheduled(fixedDelay = 5000)
     public void checkPaymentStatusFromBakong() {
-        if (bakongToken == null || bakongToken.isEmpty()) return;
-        
         java.util.List<Payment> pendingPayments = paymentRepository.findByStatus(PaymentStatus.PENDING).stream()
                 .filter(p -> p.getMd5() != null && !p.getMd5().isEmpty())
                 .collect(Collectors.toList());
 
-        if (pendingPayments.isEmpty()) return;
-
-        org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
-        String url = "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5";
-        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
-        headers.setBearerAuth(bakongToken);
-        headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-
         for (Payment payment : pendingPayments) {
-            try {
-                java.util.Map<String, String> body = new java.util.HashMap<>();
-                body.put("md5", payment.getMd5());
-                org.springframework.http.HttpEntity<java.util.Map<String, String>> request = new org.springframework.http.HttpEntity<>(body, headers);
-                
-                org.springframework.http.ResponseEntity<java.util.Map> response = restTemplate.postForEntity(url, request, java.util.Map.class);
-                
-                if (response.getBody() != null && response.getBody().get("responseCode") != null) {
-                    int responseCode = Integer.parseInt(response.getBody().get("responseCode").toString());
-                    if (responseCode == 0) { // Success
-                        payment.setStatus(PaymentStatus.PAID);
-                        paymentRepository.save(payment);
-
-                        customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
-                            order.setOrderStatus("Complete");
-                            customerOrderRepository.save(order);
-                        });
-
-                        pendingOrderRepository.findByInvoiceNo(
-                            customerOrderRepository.findById(payment.getOrderId().intValue())
-                                .map(o -> o.getInvoiceNo()).orElse(0L)
-                        ).forEach(po -> {
-                            po.setOrderStatus("Paid");
-                            pendingOrderRepository.save(po);
-                        });
-
-                        telegramService.sendPaymentNotification(
-                                String.valueOf(payment.getOrderId()),
-                                payment.getAmount(),
-                                "Bakong API (Auto Polled)"
-                        );
-                    }
-                }
-            } catch (Exception e) {
-                // Silently ignore to continue polling other pending payments
-            }
+            checkPaymentWithBakong(payment);
         }
+    }
+
+    private void checkPaymentWithBakong(Payment payment) {
+        if (bakongToken == null || bakongToken.isBlank()) {
+            return;
+        }
+
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setBearerAuth(bakongToken.trim());
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            java.util.Map<String, String> body = java.util.Map.of("md5", payment.getMd5());
+            org.springframework.http.HttpEntity<java.util.Map<String, String>> request = new org.springframework.http.HttpEntity<>(body, headers);
+            org.springframework.http.ResponseEntity<java.util.Map> response = restTemplate.postForEntity(
+                    "https://api-bakong.nbc.gov.kh/v1/check_transaction_by_md5", request, java.util.Map.class);
+
+            Object responseCode = response.getBody() == null ? null : response.getBody().get("responseCode");
+            if (responseCode != null && Integer.parseInt(responseCode.toString()) == 0) {
+                markAsPaid(payment, "Bakong API");
+            }
+        } catch (Exception e) {
+            System.err.println("Bakong status check failed for payment " + payment.getTransactionId() + ": " + e.getMessage());
+        }
+    }
+
+    private void markAsPaid(Payment payment, String paymentSource) {
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+            return;
+        }
+
+        payment.setStatus(PaymentStatus.PAID);
+        paymentRepository.save(payment);
+        customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
+            order.setOrderStatus("Complete");
+            customerOrderRepository.save(order);
+            pendingOrderRepository.findByInvoiceNo(order.getInvoiceNo()).forEach(po -> {
+                po.setOrderStatus("Paid");
+                pendingOrderRepository.save(po);
+            });
+        });
+        telegramService.sendPaymentNotification(String.valueOf(payment.getOrderId()), payment.getAmount(), paymentSource);
     }
 }
