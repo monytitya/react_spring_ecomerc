@@ -14,6 +14,6 @@ public class PlaceOrderRequest {
     @NotBlank
     private String size;
     @NotNull
-    private Integer dueAmount;
+    private Double dueAmount;
     private String paymentMode;
 }

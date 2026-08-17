@@ -127,7 +127,7 @@ INSERT INTO `customers` (`customer_id`, `customer_name`, `customer_email`, `cust
 CREATE TABLE `customer_orders` (
   `order_id` int(10) NOT NULL,
   `customer_id` int(10) NOT NULL,
-  `due_amount` int(100) NOT NULL,
+  `due_amount` decimal(10, 2) NOT NULL,
   `invoice_no` int(100) NOT NULL,
   `qty` int(10) NOT NULL,
   `size` text NOT NULL,

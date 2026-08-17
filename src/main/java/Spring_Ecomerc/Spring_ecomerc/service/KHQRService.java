@@ -23,9 +23,7 @@ public class KHQRService {
 
         khqr.append(formatTag("01", "12"));
 
-        // Tag 29 is the KHQR individual account-information template. The
-        // account ID is a Bakong alias such as merchant@bank. Merchant QR
-        // details must not be placed in this template.
+    
         khqr.append(formatTag("29", formatTag("00", merchantId)));
 
         khqr.append(formatTag("52", "5999"));
@@ -44,8 +42,6 @@ public class KHQRService {
         String additionalData = formatTag("01", orderId);
         khqr.append(formatTag("62", additionalData));
 
-        // A QR containing an amount is dynamic (01 = 12), and KHQR requires
-        // both creation and expiry timestamps for dynamic QR codes.
         long createdAt = System.currentTimeMillis();
         String timestamps = formatTag("00", Long.toString(createdAt))
                 + formatTag("01", Long.toString(createdAt + QR_EXPIRY_MILLIS));

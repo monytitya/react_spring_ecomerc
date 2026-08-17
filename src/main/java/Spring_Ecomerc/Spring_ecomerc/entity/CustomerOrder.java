@@ -25,7 +25,7 @@ public class CustomerOrder {
     private Integer customerId;
 
     @Column(name = "due_amount")
-    private Integer dueAmount;
+    private Double dueAmount;
 
     @Column(name = "invoice_no")
     private Long invoiceNo;
