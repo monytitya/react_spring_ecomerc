@@ -18,7 +18,7 @@ const Products = () => {
   const [manufacturers, setManufacturers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | { mode: 'create'|'edit', data: {} }
+  const [modal, setModal] = useState(null); 
   const [saving, setSaving] = useState(false);
   const [previews, setPreviews] = useState({ img: null });
   const [files, setFiles] = useState({ img: null });

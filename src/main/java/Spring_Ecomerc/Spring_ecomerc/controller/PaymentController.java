@@ -17,7 +17,7 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    @GetMapping("/all")
+    @GetMapping({"", "/all"})
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> getAll() {
         return ResponseEntity.ok(ApiResponse.success(paymentService.getAllPayments()));
     }

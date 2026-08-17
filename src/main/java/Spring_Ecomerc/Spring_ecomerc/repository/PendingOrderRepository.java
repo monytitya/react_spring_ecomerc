@@ -9,4 +9,5 @@ import java.util.List;
 public interface PendingOrderRepository extends JpaRepository<PendingOrder, Integer> {
     List<PendingOrder> findByCustomerId(Integer customerId);
     List<PendingOrder> findByInvoiceNo(Long invoiceNo);
+    void deleteByProductId(Integer productId);
 }

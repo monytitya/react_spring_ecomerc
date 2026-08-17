@@ -37,10 +37,10 @@ const Analytics = () => {
   if (loading) return <div className="flex justify-center py-40"><Loader2 className="w-10 h-10 animate-spin text-brand" /></div>;
 
   const statusCounts = {
-    Pending:   orders.filter(o => o.orderStatus === 'Pending').length,
-    Processing: orders.filter(o => o.orderStatus === 'Processing').length,
-    Delivered: orders.filter(o => o.orderStatus === 'Delivered').length,
-    Cancelled: orders.filter(o => o.orderStatus === 'Cancelled').length,
+    Pending:   orders.filter(o => o.orderStatus && ['Pending', 'pending'].includes(o.orderStatus)).length,
+    Processing: orders.filter(o => o.orderStatus && ['Processing', 'processing'].includes(o.orderStatus)).length,
+    Delivered: orders.filter(o => o.orderStatus && ['Delivered', 'delivered', 'Paid', 'paid', 'Complete', 'complete', 'Completed', 'completed'].includes(o.orderStatus)).length,
+    Cancelled: orders.filter(o => o.orderStatus && ['Cancelled', 'cancelled'].includes(o.orderStatus)).length,
   };
 
   const kpis = [

@@ -257,7 +257,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.PAID);
         paymentRepository.save(payment);
         customerOrderRepository.findById(payment.getOrderId().intValue()).ifPresent(order -> {
-            order.setOrderStatus("Complete");
+            order.setOrderStatus("Paid");
             customerOrderRepository.save(order);
             pendingOrderRepository.findByInvoiceNo(order.getInvoiceNo()).forEach(po -> {
                 po.setOrderStatus("Paid");

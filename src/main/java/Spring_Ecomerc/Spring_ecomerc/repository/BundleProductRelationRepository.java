@@ -9,4 +9,5 @@ import java.util.List;
 public interface BundleProductRelationRepository extends JpaRepository<BundleProductRelation, Integer> {
     List<BundleProductRelation> findByBundleId(Integer bundleId);
     List<BundleProductRelation> findByProductId(Integer productId);
+    void deleteByProductId(Integer productId);
 }

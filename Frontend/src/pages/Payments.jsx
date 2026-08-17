@@ -22,7 +22,7 @@ const Payments = () => {
         setLoading(true);
         try {
             const token = localStorage.getItem('admin_token');
-            const res = await axios.get('http://localhost:9090/api/admin/payments', {
+            const res = await axios.get('http://localhost:9090/api/admin/payments/all', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setPayments(res.data.data || []);

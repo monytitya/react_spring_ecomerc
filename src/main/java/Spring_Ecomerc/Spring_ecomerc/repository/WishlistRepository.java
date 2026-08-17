@@ -11,4 +11,5 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Integer> {
     List<Wishlist> findByCustomerId(Integer customerId);
     Optional<Wishlist> findByCustomerIdAndProductId(Integer customerId, Integer productId);
     void deleteByCustomerIdAndProductId(Integer customerId, Integer productId);
+    void deleteByProductId(Integer productId);
 }

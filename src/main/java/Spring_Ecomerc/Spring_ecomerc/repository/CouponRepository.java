@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface CouponRepository extends JpaRepository<Coupon, Integer> {
     Optional<Coupon> findByCouponCode(String couponCode);
+    void deleteByProductId(Integer productId);
 }

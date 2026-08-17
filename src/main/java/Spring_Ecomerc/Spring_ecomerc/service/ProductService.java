@@ -2,13 +2,19 @@ package Spring_Ecomerc.Spring_ecomerc.service;
 
 import Spring_Ecomerc.Spring_ecomerc.entity.Product;
 import Spring_Ecomerc.Spring_ecomerc.model.ProductModel;
+import Spring_Ecomerc.Spring_ecomerc.repository.BundleProductRelationRepository;
+import Spring_Ecomerc.Spring_ecomerc.repository.CartRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.CategoryRepository;
+import Spring_Ecomerc.Spring_ecomerc.repository.CouponRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ManufacturerRepository;
+import Spring_Ecomerc.Spring_ecomerc.repository.PendingOrderRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ProductCategoryRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ProductRepository;
+import Spring_Ecomerc.Spring_ecomerc.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -24,6 +30,11 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductCategoryRepository productCategoryRepository;
     private final ManufacturerRepository manufacturerRepository;
+    private final CouponRepository couponRepository;
+    private final WishlistRepository wishlistRepository;
+    private final CartRepository cartRepository;
+    private final BundleProductRelationRepository bundleProductRelationRepository;
+    private final PendingOrderRepository pendingOrderRepository;
     private final FileService fileService;
 
 
@@ -154,10 +165,18 @@ public class ProductService {
         return model;
     }
 
+    @Transactional
     public void deleteProduct(Integer id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
 
+        couponRepository.deleteByProductId(product.getProductId());
+        wishlistRepository.deleteByProductId(product.getProductId());
+        cartRepository.deleteByProductId(product.getProductId());
+        bundleProductRelationRepository.deleteByProductId(product.getProductId());
+        pendingOrderRepository.deleteByProductId(product.getProductId());
 
-        productRepository.deleteById(id);
+        productRepository.delete(product);
     }
 }
 
