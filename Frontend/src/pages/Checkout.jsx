@@ -32,14 +32,14 @@ const Checkout = () => {
       setOrderData(order);
       
       // Validate and convert amount to Double - must be >= 0.01
-      const actualAmount = order.dueAmount ? parseFloat(order.dueAmount) : null;
-      
-      if (!actualAmount || actualAmount <= 0) {
+      const actualAmount = Number(order.dueAmount ?? 0);
+
+      if (!Number.isFinite(actualAmount) || actualAmount <= 0) {
         throw new Error(
-          `Invalid order amount. Orders must be at least $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} to proceed with payment.`
+          `Invalid order amount. Orders must be at least $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} USD or ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel (KHR) to proceed with payment.`
         );
       }
-      
+
       if (actualAmount < PAYMENT_CONSTANTS.MIN_AMOUNT_USD) {
         throw new Error(
           `Order amount is too low. Minimum payment amount is $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} USD (or ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel).`

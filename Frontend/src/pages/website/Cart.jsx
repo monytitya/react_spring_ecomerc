@@ -51,7 +51,7 @@ const Cart = () => {
       const firstItem = items[0];
       const payload = {
         customerId: user?.id || null,
-        dueAmount: Math.round(total),
+        dueAmount: Number(total.toFixed(2)),
         qty: firstItem.qty || 1,
         size: firstItem.size || 'M',
         productId: firstItem.pId || firstItem.pid || firstItem.productId || firstItem.id,

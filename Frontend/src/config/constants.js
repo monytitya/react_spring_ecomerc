@@ -4,22 +4,38 @@
 
 // Minimum payment amounts
 export const PAYMENT_CONSTANTS = {
-  MIN_AMOUNT_USD: 0.01,        // Minimum 0.01 USD
-  MIN_AMOUNT_KHR: 100,         // Minimum 100 Riel (approximately 0.01 USD)
+  MIN_AMOUNT_USD: 0.01,
+  MIN_AMOUNT_KHR: 100,
   CURRENCY_USD: 'USD',
   CURRENCY_KHR: 'KHR',
 };
 
-// Validation helpers
-export const validateOrderAmount = (amount) => {
-  if (!amount || amount < PAYMENT_CONSTANTS.MIN_AMOUNT_USD) {
+export const validateOrderAmount = (amount, currency = PAYMENT_CONSTANTS.CURRENCY_USD) => {
+  const parsedAmount = Number(amount);
+
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
     return {
       valid: false,
-      error: `Minimum order amount is $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} (USD) or ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel (KHR)`,
+      error: `Invalid order amount. Orders must be at least $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} USD or ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel (KHR) to proceed with payment.`,
       minAmount: PAYMENT_CONSTANTS.MIN_AMOUNT_USD,
     };
   }
-  return { valid: true, error: null, amount };
+
+  const minThreshold = currency === PAYMENT_CONSTANTS.CURRENCY_KHR
+    ? PAYMENT_CONSTANTS.MIN_AMOUNT_KHR
+    : PAYMENT_CONSTANTS.MIN_AMOUNT_USD;
+
+  if (parsedAmount < minThreshold) {
+    return {
+      valid: false,
+      error: currency === PAYMENT_CONSTANTS.CURRENCY_KHR
+        ? `Minimum order amount is ${PAYMENT_CONSTANTS.MIN_AMOUNT_KHR} Riel (KHR).`
+        : `Invalid order amount. Orders must be at least $${PAYMENT_CONSTANTS.MIN_AMOUNT_USD} to proceed with payment.`,
+      minAmount: minThreshold,
+    };
+  }
+
+  return { valid: true, error: null, amount: parsedAmount };
 };
 
 export default PAYMENT_CONSTANTS;

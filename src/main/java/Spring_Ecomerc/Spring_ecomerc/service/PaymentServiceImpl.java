@@ -34,6 +34,20 @@ public class PaymentServiceImpl implements PaymentService {
     private static final Double MIN_PAYMENT_AMOUNT_USD = 0.01;
     private static final Integer MIN_PAYMENT_AMOUNT_KHR = 100;
 
+    public static boolean validateMinimumPaymentAmount(Double amount, String currency) {
+        if (amount == null) {
+            return false;
+        }
+
+        String normalizedCurrency = currency == null ? "" : currency.trim().toUpperCase(Locale.ROOT);
+
+        if ("KHR".equals(normalizedCurrency)) {
+            return amount >= MIN_PAYMENT_AMOUNT_KHR;
+        }
+
+        return amount >= MIN_PAYMENT_AMOUNT_USD;
+    }
+
     @Value("${payment.khqr.merchant-id}")
     private String merchantId;
 
@@ -64,11 +78,15 @@ public class PaymentServiceImpl implements PaymentService {
         }
         
         // Validate minimum payment amount (0.01 USD / 100 Riel)
-        if (request.getAmount() < MIN_PAYMENT_AMOUNT_USD) {
+        String paymentCurrency = request.getCurrency() == null ? "USD" : request.getCurrency().trim().toUpperCase(Locale.ROOT);
+        if (!validateMinimumPaymentAmount(request.getAmount(), paymentCurrency)) {
+            String minMessage = "KHR".equals(paymentCurrency)
+                ? MIN_PAYMENT_AMOUNT_KHR + " Riel"
+                : "$" + String.format(Locale.ROOT, "%.2f", MIN_PAYMENT_AMOUNT_USD) + " USD";
+
             throw new RuntimeException(
-                "Payment amount too low: $" + String.format("%.2f", request.getAmount()) + 
-                ". Minimum payment amount is $" + MIN_PAYMENT_AMOUNT_USD + " USD (or " + MIN_PAYMENT_AMOUNT_KHR + " Riel). " +
-                "Order #" + request.getOrderId()
+                "Payment amount too low: " + String.format(Locale.ROOT, "%.2f", request.getAmount()) +
+                " " + paymentCurrency + ". Minimum payment amount is " + minMessage + ". Order #" + request.getOrderId()
             );
         }
         
