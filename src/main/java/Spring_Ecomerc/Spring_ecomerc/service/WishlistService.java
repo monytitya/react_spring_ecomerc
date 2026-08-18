@@ -28,7 +28,7 @@ public class WishlistService {
         var existing = wishlistRepository.findByCustomerIdAndProductId(customerId, productId);
         if (existing.isPresent()) {
             wishlistRepository.delete(existing.get());
-            return null; // Signals 'removed'
+            return null; 
         }
         Wishlist wishlist = Wishlist.builder()
                 .customerId(customerId)
