@@ -11,6 +11,8 @@ public class OrderModel {
     private Integer orderId;
     private Integer customerId;
     private String customerName;
+    private String customerPhone;
+    private String customerAddress;
     private Double dueAmount;
     private Long invoiceNo;
     private Integer qty;

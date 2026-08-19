@@ -1,12 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ShoppingBag, Minus, Plus, X, Tag, ArrowRight, Loader2, ShoppingCart, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Minus, Plus, X, Tag, ArrowRight, Loader2, ShoppingCart, AlertCircle, User, Phone, MapPin } from 'lucide-react';
 import { couponApi, orderApi } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { PAYMENT_CONSTANTS, validateOrderAmount } from '../../config/constants';
 
 const BASE = 'http://localhost:9090/api/files/';
 const img  = (f) => (f ? `${BASE}${f}` : null);
+const getInitialContact = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return {
+      name: user?.customerName || user?.name || '',
+      phone: user?.customerContact || user?.phone || '',
+      address: user?.customerAddress || user?.address || '',
+    };
+  } catch {
+    return { name: '', phone: '', address: '' };
+  }
+};
 
 const Cart = () => {
   const { cartItems: items, updateQty, removeFromCart, clearCart, refreshCart } = useCart();
@@ -18,6 +30,8 @@ const Cart = () => {
   const [updating, setUpdating] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [amountError, setAmountError] = useState('');
+  const [contact, setContact] = useState(getInitialContact);
+  const [contactError, setContactError] = useState('');
   const navigate = useNavigate();
   const isLoggedIn = !!(localStorage.getItem('admin_token') || localStorage.getItem('customer_token'));
 
@@ -35,6 +49,14 @@ const Cart = () => {
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
+    const name = contact.name.trim();
+    const phone = contact.phone.trim();
+    const address = contact.address.trim();
+    if (!name || !phone || !address) {
+      setContactError('Name, phone number, and delivery address are required before payment.');
+      return;
+    }
+    setContactError('');
     
     // Validate minimum amount
     const amountValidation = validateOrderAmount(total);
@@ -55,6 +77,9 @@ const Cart = () => {
         qty: firstItem.qty || 1,
         size: firstItem.size || 'M',
         productId: firstItem.pId || firstItem.pid || firstItem.productId || firstItem.id,
+        customerName: name,
+        customerPhone: phone,
+        customerAddress: address,
       };
       const res = await orderApi.placeOrder(payload);
       if (res.data?.success) {
@@ -229,6 +254,41 @@ const Cart = () => {
                   </div>
                   {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
                   {couponApplied && <p className="text-green-600 text-xs mt-1 font-semibold">✓ Coupon applied! You save ${discount}</p>}
+                </div>
+
+                {/* Totals */}
+                <div className="mt-6 border-t border-slate-100 pt-6">
+                  <h2 className="font-black text-slate-900 mb-1">Delivery Details</h2>
+                  <p className="text-xs text-slate-500 mb-4">Enter your contact details before continuing to payment.</p>
+                  <div className="space-y-3">
+                    {[
+                      { key: 'name', label: 'Full name', placeholder: 'Your full name', icon: User },
+                      { key: 'phone', label: 'Phone number', placeholder: '+855 12 345 678', icon: Phone },
+                    ].map(({ key, label, placeholder, icon: Icon }) => (
+                      <div key={key} className="relative">
+                        <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input
+                          value={contact[key]}
+                          onChange={e => setContact(prev => ({ ...prev, [key]: e.target.value }))}
+                          placeholder={placeholder}
+                          aria-label={label}
+                          className="w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                        />
+                      </div>
+                    ))}
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
+                      <textarea
+                        value={contact.address}
+                        onChange={e => setContact(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Delivery address"
+                        aria-label="Delivery address"
+                        rows={3}
+                        className="w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 resize-none"
+                      />
+                    </div>
+                  </div>
+                  {contactError && <p className="mt-3 text-xs font-semibold text-red-600">{contactError}</p>}
                 </div>
 
                 {/* Totals */}

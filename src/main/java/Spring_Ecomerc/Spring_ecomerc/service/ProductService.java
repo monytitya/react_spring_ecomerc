@@ -7,11 +7,11 @@ import Spring_Ecomerc.Spring_ecomerc.repository.CartRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.CategoryRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.CouponRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ManufacturerRepository;
-import Spring_Ecomerc.Spring_ecomerc.repository.PendingOrderRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ProductCategoryRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.ProductRepository;
 import Spring_Ecomerc.Spring_ecomerc.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
+import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +34,8 @@ public class ProductService {
     private final WishlistRepository wishlistRepository;
     private final CartRepository cartRepository;
     private final BundleProductRelationRepository bundleProductRelationRepository;
-    private final PendingOrderRepository pendingOrderRepository;
     private final FileService fileService;
+    private final EntityManager entityManager;
 
 
     public Page<ProductModel> getAllProducts(int page, int size, String sortBy) {
@@ -75,6 +75,7 @@ public class ProductService {
     }
 
     public ProductModel createProduct(Product product, MultipartFile img) throws IOException {
+        validateProduct(product);
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
         if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadFile(img, "products"));
@@ -82,6 +83,7 @@ public class ProductService {
     }
 
     public ProductModel createProductBase64(Product product, String img) throws IOException {
+        validateProduct(product);
         product.setProductId(null);
         product.setDate(LocalDateTime.now());
         if (img != null && !img.isEmpty()) product.setProductImg(fileService.uploadBase64(img, "products"));
@@ -94,6 +96,7 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
+        validateProduct(existing);
         
         if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadFile(img, "products"));
         
@@ -105,6 +108,7 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
         
         copyProperties(updatedProduct, existing);
+        validateProduct(existing);
         
         if (img != null && !img.isEmpty()) existing.setProductImg(fileService.uploadBase64(img, "products"));
         
@@ -165,6 +169,20 @@ public class ProductService {
         return model;
     }
 
+    private void validateProduct(Product product) {
+        if (product.getProductTitle() == null || product.getProductTitle().isBlank()) {
+            throw new IllegalArgumentException("Product title is required");
+        }
+        if (product.getProductPrice() == null || !Double.isFinite(product.getProductPrice())
+                || product.getProductPrice() <= 0) {
+            throw new IllegalArgumentException("Product price must be greater than 0");
+        }
+        if (product.getProductPspPrice() != null && (!Double.isFinite(product.getProductPspPrice())
+                || product.getProductPspPrice() < 0)) {
+            throw new IllegalArgumentException("PSP price cannot be negative");
+        }
+    }
+
     @Transactional
     public void deleteProduct(Integer id) {
         Product product = productRepository.findById(id)
@@ -174,9 +192,15 @@ public class ProductService {
         wishlistRepository.deleteByProductId(product.getProductId());
         cartRepository.deleteByProductId(product.getProductId());
         bundleProductRelationRepository.deleteByProductId(product.getProductId());
-        pendingOrderRepository.deleteByProductId(product.getProductId());
+        entityManager.flush();
+        entityManager.createNativeQuery(
+                "delete from pending_orders where cast(product_id as text) = cast(:productId as text)")
+            .setParameter("productId", product.getProductId())
+            .executeUpdate();
+        entityManager.flush();
 
-        productRepository.delete(product);
+        productRepository.deleteById(product.getProductId());
+        entityManager.flush();
     }
 }
 

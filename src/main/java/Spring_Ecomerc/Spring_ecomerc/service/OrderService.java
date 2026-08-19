@@ -36,6 +36,9 @@ public class OrderService {
 
         CustomerOrder order = CustomerOrder.builder()
                 .customerId(customerId)
+                .customerName(request.getCustomerName())
+                .customerPhone(request.getCustomerPhone())
+                .customerAddress(request.getCustomerAddress())
                 .dueAmount(request.getDueAmount())
                 .invoiceNo(invoiceNo)
                 .qty(request.getQty())
@@ -47,6 +50,9 @@ public class OrderService {
 
         PendingOrder pendingOrder = PendingOrder.builder()
                 .customerId(customerId)
+                .customerName(request.getCustomerName())
+                .customerPhone(request.getCustomerPhone())
+                .customerAddress(request.getCustomerAddress())
                 .invoiceNo(invoiceNo)
                 .productId(request.getProductId())
                 .qty(request.getQty())
@@ -108,6 +114,9 @@ public class OrderService {
         OrderModel model = new OrderModel();
         model.setOrderId(order.getOrderId());
         model.setCustomerId(order.getCustomerId());
+        model.setCustomerName(order.getCustomerName());
+        model.setCustomerPhone(order.getCustomerPhone());
+        model.setCustomerAddress(order.getCustomerAddress());
         model.setDueAmount(order.getDueAmount());
         model.setInvoiceNo(order.getInvoiceNo());
         model.setQty(order.getQty());
@@ -115,7 +124,7 @@ public class OrderService {
         model.setOrderDate(order.getOrderDate());
         model.setOrderStatus(order.getOrderStatus());
 
-        if (order.getCustomer() != null) {
+        if (order.getCustomer() != null && (model.getCustomerName() == null || model.getCustomerName().isBlank())) {
             model.setCustomerName(order.getCustomer().getCustomerName());
         } else if (order.getCustomerId() != null) {
             customerRepository.findById(order.getCustomerId()).ifPresentOrElse(

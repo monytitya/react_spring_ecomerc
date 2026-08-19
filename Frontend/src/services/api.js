@@ -157,10 +157,9 @@ export const cmsApi = {
 };
 
 export const paymentApi = {
-  create: (data) => api.post('/payments/create', data),
-  getStatus: (transactionId) => api.get(`/payments/status/${transactionId}`),
-  webhook: (data) => api.post('/payments/callback', data),
-  simulatePaid: (transactionId) => api.post(`/payments/simulate-paid/${transactionId}`),
+  create: (data) => api.post('/payment/create', data),
+  getStatus: (transactionId) => api.get(`/payment/status/${transactionId}`),
+  webhook: (data) => api.post('/payment/webhook', data),
 };
 
 export const adminApi = {

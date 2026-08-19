@@ -15,5 +15,11 @@ public class PlaceOrderRequest {
     private String size;
     @NotNull
     private Double dueAmount;
+    @NotBlank
+    private String customerName;
+    @NotBlank
+    private String customerPhone;
+    @NotBlank
+    private String customerAddress;
     private String paymentMode;
 }

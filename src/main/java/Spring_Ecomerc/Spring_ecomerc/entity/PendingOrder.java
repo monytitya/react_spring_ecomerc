@@ -23,6 +23,15 @@ public class PendingOrder {
     @Column(name = "customer_id")
     private Integer customerId;
 
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "customer_phone")
+    private String customerPhone;
+
+    @Column(name = "customer_address", columnDefinition = "TEXT")
+    private String customerAddress;
+
     @Column(name = "invoice_no")
     private Long invoiceNo;
 

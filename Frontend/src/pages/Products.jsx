@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { productApi, catalogApi, fileUrl } from '../services/api';
-import { Package, Plus, Search, Edit2, Trash2, X, Save, Loader2, Upload, Tag, ChevronDown } from 'lucide-react';
+import { Package, Plus, Search, Edit2, Trash2, X, Save, Loader2, Upload } from 'lucide-react';
 
 const emptyProduct = {
   productTitle: '', productUrl: '', productPrice: '', productPspPrice: '',
@@ -43,7 +43,9 @@ const Products = () => {
       setFiltered(prods);
       setCategories(cRes.data?.data || []);
       setManufacturers(mRes.data?.data || []);
-    } catch { showToast('Failed to load products', 'error'); }
+    } catch (e) {
+      showToast(e.response?.data?.message || e.message || 'Failed to load products', 'error');
+    }
     finally { setLoading(false); }
   };
 
@@ -83,14 +85,30 @@ const Products = () => {
   };
 
   const handleSave = async () => {
+    const title = modal.data.productTitle?.trim();
+    const price = Number(modal.data.productPrice);
+    const pspPrice = Number(modal.data.productPspPrice || 0);
+    if (!title) {
+      showToast('Product title is required.', 'error');
+      return;
+    }
+    if (!Number.isFinite(price) || price <= 0) {
+      showToast('Product price must be greater than $0.00.', 'error');
+      return;
+    }
+    if (!Number.isFinite(pspPrice) || pspPrice < 0) {
+      showToast('PSP price cannot be negative.', 'error');
+      return;
+    }
+
     setSaving(true);
     try {
       const formData = new FormData();
       const productBlob = new Blob([JSON.stringify({
-        productTitle: modal.data.productTitle,
+        productTitle: title,
         productUrl: modal.data.productUrl,
-        productPrice: Number(modal.data.productPrice),
-        productPspPrice: Number(modal.data.productPspPrice),
+        productPrice: price,
+        productPspPrice: pspPrice,
         productDesc: modal.data.productDesc,
         productFeatures: modal.data.productFeatures,
         productKeywords: modal.data.productKeywords,
@@ -111,8 +129,8 @@ const Products = () => {
         showToast('Product updated!');
       }
       setModal(null);
-      load();
-    } catch (e) { showToast(e.response?.data?.message || 'Save failed', 'error'); }
+      await load();
+    } catch (e) { showToast(e.response?.data?.message || e.message || 'Save failed', 'error'); }
     finally { setSaving(false); }
   };
 
@@ -122,8 +140,10 @@ const Products = () => {
     try {
       await productApi.admin.delete(id);
       showToast('Product deleted!');
-      load();
-    } catch { showToast('Delete failed', 'error'); }
+      await load();
+    } catch (e) {
+      showToast(e.response?.data?.message || e.message || 'Delete failed', 'error');
+    }
     finally { setDeletingId(null); }
   };
 

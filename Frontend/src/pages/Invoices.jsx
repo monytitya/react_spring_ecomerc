@@ -52,6 +52,140 @@ const Invoices = () => {
     .filter(o => o.orderStatus === 'Delivered')
     .reduce((sum, o) => sum + (o.dueAmount || 0), 0);
 
+  const printInvoice = (order) => {
+    if (!order) return;
+
+    const subtotal = Number(order.dueAmount ?? 0);
+    const tax = 0;
+    const total = subtotal + tax;
+    const statusStyle = {
+      Pending: 'color:#b45309;background:#fef3c7',
+      Processing: 'color:#1d4ed8;background:#dbeafe',
+      Shipped: 'color:#6d28d9;background:#ede9fe',
+      Delivered: 'color:#065f46;background:#d1fae5',
+      Cancelled: 'color:#b91c1c;background:#fee2e2',
+    }[order.orderStatus] || 'color:#374151;background:#f3f4f6';
+
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
+    if (!printWindow) {
+      showToast('Print popup was blocked. Please allow popups and try again.', 'error');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Invoice #${order.invoiceNo}</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #1e293b;
+            background: #fff;
+            padding: 40px;
+          }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+          .title { font-size: 36px; font-weight: 900; letter-spacing: -1px; color: #0f172a; }
+          .invoice-no { margin-top: 8px; color: #64748b; font-size: 13px; }
+          .brand { text-align: right; }
+          .brand-name { font-weight: 800; font-size: 22px; color: #2563eb; }
+          .brand-addr { margin-top: 6px; color: #64748b; font-size: 12px; line-height: 1.6; }
+          .divider { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+          .meta { display: flex; justify-content: space-between; margin-bottom: 24px; }
+          .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 6px; }
+          .meta-value { font-size: 15px; font-weight: 700; color: #0f172a; }
+          .meta-sub { font-size: 12px; color: #64748b; margin-top: 4px; }
+          .meta-right { text-align: right; }
+          .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            ${statusStyle}
+          }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+          thead tr { background: #f8fafc; }
+          th, td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; }
+          th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #94a3b8; }
+          th:last-child, td:last-child { text-align: right; }
+          td { font-size: 13px; color: #334155; }
+          .totals { display: flex; justify-content: flex-end; }
+          .totals-box { width: 260px; }
+          .total-row { display: flex; justify-content: space-between; margin-top: 8px; font-size: 13px; color: #64748b; }
+          .total-row.grand { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 16px; font-weight: 900; color: #0f172a; }
+          .footer { margin-top: 40px; text-align: center; font-size: 11px; color: #94a3b8; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <div class="title">INVOICE</div>
+            <div class="invoice-no">#${order.invoiceNo}</div>
+          </div>
+          <div class="brand">
+            <div class="brand-name">Blueberry CRM</div>
+            <div class="brand-addr">123 E-Commerce Blvd<br />Suite 400, Tech City</div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="meta">
+          <div>
+            <div class="meta-label">Billed To</div>
+            <div class="meta-value">${order.customerName || 'Guest User'}</div>
+            <div class="meta-sub">Customer ID: ${order.customerId ?? '—'}</div>
+          </div>
+          <div class="meta-right">
+            <div class="meta-label">Order Details</div>
+            <div class="meta-sub">Date: <strong>${order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—'}</strong></div>
+            <div class="meta-sub" style="margin-top: 8px;">Status: <span class="status-badge">${order.orderStatus || 'Pending'}</span></div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item Description</th>
+              <th>Size</th>
+              <th>Qty</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${order.productTitle || 'Unknown Product'}</td>
+              <td>${order.size || '—'}</td>
+              <td>${order.qty}</td>
+              <td><strong>$${subtotal.toLocaleString()}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="totals">
+          <div class="totals-box">
+            <div class="total-row"><span>Subtotal</span><span>$${subtotal.toLocaleString()}</span></div>
+            <div class="total-row"><span>Tax (0%)</span><span>$${tax.toFixed(2)}</span></div>
+            <div class="total-row grand"><span>Total</span><span>$${total.toLocaleString()}</span></div>
+          </div>
+        </div>
+
+        <div class="footer">Thank you for your business! · Blueberry CRM</div>
+      </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 350);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 print:hidden">
       {toast && (
@@ -149,7 +283,7 @@ const Invoices = () => {
               </div>
               <div className="flex items-center space-x-3">
                 <button 
-                  onClick={() => window.print()} 
+                  onClick={() => printInvoice(viewModal)} 
                   className="px-4 py-2 bg-brand text-white font-bold rounded-lg hover:bg-brand/90 transition-all text-sm flex items-center shadow-lg shadow-brand/20">
                   <FileText className="w-4 h-4 mr-2" /> Print Invoice
                 </button>

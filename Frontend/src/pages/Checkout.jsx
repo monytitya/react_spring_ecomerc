@@ -16,7 +16,6 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [transactionId, setTransactionId] = useState(null);
   const [amount, setAmount] = useState(0);
-  const [orderData, setOrderData] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [pollCount, setPollCount] = useState(0);
   const maxPollAttempts = 120; // 10 minutes (120 * 5 seconds)
@@ -24,12 +23,17 @@ const Checkout = () => {
   const initPayment = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
+      setTransactionId(null);
+      setQr(null);
+      setQrImage(null);
+      setPollCount(0);
+      setStatus('PENDING');
       // 1. Fetch real order details using invoiceNo
       const orderRes = await orderApi.getByInvoice(invoiceNo);
       if (!orderRes.data?.success) throw new Error("Order not found");
 
       const order = orderRes.data.data;
-      setOrderData(order);
       
       // Validate and convert amount to Double - must be >= 0.01
       const actualAmount = Number(order.dueAmount ?? 0);
@@ -58,7 +62,7 @@ const Checkout = () => {
       if (res.data?.success) {
         const pData = res.data.data;
         setTransactionId(pData.transactionId);
-        setStatus(pData.status);
+        setStatus(pData.status || 'PENDING');
         setQr(pData.qrString);
         setQrImage(pData.qrImage); // Base64 from ZXing
 
@@ -75,18 +79,19 @@ const Checkout = () => {
   };
 
   const pollStatus = async () => {
-    if (!transactionId || status === 'PAID') return;
+    if (!transactionId || status !== 'PENDING') return;
     try {
       const res = await paymentApi.getStatus(transactionId);
-      if (res.data.data?.status === 'PAID') {
-        setStatus('PAID');
+      const paymentStatus = res.data.data?.status;
+      if (paymentStatus === 'PAID' || paymentStatus === 'FAILED') {
+        setStatus(paymentStatus);
         setPollCount(0);
       } else {
         setPollCount(prev => {
           const newCount = prev + 1;
           if (newCount >= maxPollAttempts) {
-            setErrorMsg('Payment confirmation timeout. Please try again or contact support.');
-            setStatus('FAILED');
+            setErrorMsg('Payment confirmation timed out. The QR code expired before the bank confirmed your payment.');
+            setStatus('EXPIRED');
             return newCount;
           }
           return newCount;
@@ -144,10 +149,12 @@ const Checkout = () => {
                 View Order Confirmation
               </Link>
             </div>
-          ) : status === 'FAILED' ? (
+          ) : status === 'FAILED' || status === 'EXPIRED' ? (
             <div className="text-center animate-in zoom-in duration-500 w-full">
               <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-black text-slate-900">Payment Timeout</h2>
+              <h2 className="text-xl font-black text-slate-900">
+                {status === 'EXPIRED' ? 'Payment Window Expired' : 'Payment Declined'}
+              </h2>
               <p className="text-red-500 text-sm mt-2 p-4 bg-red-50 rounded-xl border border-red-100">
                 {errorMsg || 'Payment confirmation took too long. Please try again.'}
               </p>
